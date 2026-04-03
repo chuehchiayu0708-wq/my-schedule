@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="zh-TW" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的質感行程管理</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* 定義亮色與深色模式的顏色變數 */
+        :root {
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --bg: #f3f4f6;
+            --surface: #ffffff;
+            --text-main: #1f2937;
+            --text-muted: #6b7280;
+            --danger: #ef4444;
+            --border: #e5e7eb;
+            --input-bg: #ffffff;
+            --header-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        [data-theme="dark"] {
+            --primary: #6366f1;
+            --primary-hover: #818cf8;
+            --bg: #111827;
+            --surface: #1f2937;
+            --text-main: #f9fafb;
+            --text-muted: #9ca3af;
+            --danger: #f87171;
+            --border: #374151;
+            --input-bg: #374151;
+            --header-gradient: linear-gradient(135deg, #312e81 0%, #1e1b4b 100%);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .app-container {
+            background-color: var(--surface);
+            width: 100%;
+            max-width: 480px;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            transition: background-color 0.3s;
+        }
+
+        .header {
+            background: var(--header-gradient);
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+            position: relative;
+            transition: background 0.3s;
+        }
+
+        /* 深色模式切換按鈕 */
+        .theme-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: background 0.2s;
+        }
+
+        .theme-toggle:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .header p {
+            font-size: 14px;
+            opacity: 0.8;
+        }
+
+        .input-section {
+            padding: 20px;
+            background-color: var(--surface);
+            border-bottom: 1px solid var(--border);
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        input {
+            padding: 12px 15px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            font-size: 14px;
+            outline: none;
+            background-color: var(--input-bg);
+            color: var(--text-main);
+            transition: border-color 0.2s, background-color 0.3s, color 0.3s;
+        }
+
+        input:focus {
+            border-color: var(--primary);
+        }
+
+        input[type="time"] {
+            width: 120px;
+            cursor: pointer;
+        }
+
+        /* 修正深色模式下時間選擇器的 icon 顏色 (針對支援的瀏覽器) */
+        [data-theme="dark"] input[type="time"]::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+        }
+
+        input[type="text"] {
+            flex-grow: 1;
+        }
+
+        button.add-btn {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 0 20px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+
+        button.add-btn:hover {
+            background-color: var(--primary-hover);
+        }
+
+        button.add-btn:active {
+            transform: scale(0.95);
+        }
+
+        .error-msg {
+            color: var(--danger);
+            font-size: 12px;
+            margin-top: 8px;
+            display: none;
+        }
+
+        .schedule-section {
+            padding: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .timeline {
+            list-style: none;
+            position: relative;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 20px;
+            width: 2px;
+            background-color: var(--border);
+            transition: background-color 0.3s;
+        }
+
+        .task-item {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 20px;
+            position: relative;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .task-dot {
+            width: 14px;
+            height: 14px;
+            background-color: var(--primary);
+            border-radius: 50%;
+            border: 3px solid var(--surface);
+            box-shadow: 0 0 0 1px var(--primary);
+            position: absolute;
+            left: 14px;
+            top: 5px;
+            z-index: 1;
+            transition: border-color 0.3s;
+        }
+
+        .task-content {
+            margin-left: 45px;
+            background-color: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 15px;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+
+        .task-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .task-time {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: color 0.3s;
+        }
+
+        .task-title {
+            font-size: 15px;
+            font-weight: 500;
+            word-break: break-all;
+        }
+
+        .delete-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 18px;
+            padding: 5px;
+            transition: color 0.2s;
+            opacity: 0.5;
+        }
+
+        .delete-btn:hover {
+            color: var(--danger);
+            opacity: 1;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: var(--text-muted);
+            padding: 30px 0;
+            font-size: 14px;
+            transition: color 0.3s;
+        }
+
+        /* 隱藏卷軸但保留功能 */
+        .schedule-section::-webkit-scrollbar {
+            width: 6px;
+        }
+        .schedule-section::-webkit-scrollbar-thumb {
+            background-color: var(--border);
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <div class="header">
+        <!-- 深色模式切換按鈕 -->
+        <button class="theme-toggle" id="themeToggleBtn" onclick="toggleTheme()" title="切換深色模式">
+            <i class="fa-solid fa-moon"></i>
+        </button>
+        <h1><i class="fa-solid fa-calendar-check"></i> 今日行程</h1>
+        <p id="dateDisplay">載入日期中...</p>
+    </div>
+
+    <div class="input-section">
+        <div class="input-group">
+            <input type="time" id="timeInput" required>
+            <input type="text" id="taskInput" placeholder="準備做什麼呢？" required onkeypress="handleKeyPress(event)">
+            <button class="add-btn" onclick="addTask()"><i class="fa-solid fa-plus"></i></button>
+        </div>
+        <div id="errorMsg" class="error-msg"><i class="fa-solid fa-circle-exclamation"></i> 請填寫完整的時間與行程內容！</div>
+    </div>
+
+    <div class="schedule-section">
+        <ul class="timeline" id="scheduleList">
+            <!-- 行程會動態載入這裡 -->
+        </ul>
+    </div>
+</div>
+
+<script>
+    // 顯示今天日期
+    const dateDisplay = document.getElementById('dateDisplay');
+    const today = new Date();
+    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+    dateDisplay.innerText = today.toLocaleDateString('zh-TW', options);
+
+    // 行程資料陣列
+    let tasks = [];
+
+    // 主題設定 (Light / Dark Mode)
+    function initTheme() {
+        const savedTheme = localStorage.getItem('myScheduleTheme');
+        const html = document.documentElement;
+        const toggleIcon = document.querySelector('#themeToggleBtn i');
+        
+        if (savedTheme === 'dark') {
+            html.setAttribute('data-theme', 'dark');
+            toggleIcon.className = 'fa-solid fa-sun';
+        } else {
+            html.setAttribute('data-theme', 'light');
+            toggleIcon.className = 'fa-solid fa-moon';
+        }
+    }
+
+    function toggleTheme() {
+        const html = document.documentElement;
+        const currentTheme = html.getAttribute('data-theme');
+        const toggleIcon = document.querySelector('#themeToggleBtn i');
+
+        if (currentTheme === 'light') {
+            html.setAttribute('data-theme', 'dark');
+            localStorage.setItem('myScheduleTheme', 'dark');
+            toggleIcon.className = 'fa-solid fa-sun';
+        } else {
+            html.setAttribute('data-theme', 'light');
+            localStorage.setItem('myScheduleTheme', 'light');
+            toggleIcon.className = 'fa-solid fa-moon';
+        }
+    }
+
+    // 網頁載入時執行
+    window.onload = function() {
+        initTheme();
+        const savedTasks = localStorage.getItem('myScheduleTasks');
+        if (savedTasks) {
+            tasks = JSON.parse(savedTasks);
+        }
+        renderTasks();
+    }
+
+    // 按下 Enter 鍵也可以新增
+    function handleKeyPress(event) {
+        if (event.key === 'Enter') {
+            addTask();
+        }
+    }
+
+    // 新增行程
+    function addTask() {
+        const timeInput = document.getElementById('timeInput');
+        const taskInput = document.getElementById('taskInput');
+        const errorMsg = document.getElementById('errorMsg');
+        const timeValue = timeInput.value;
+        const taskValue = taskInput.value;
+
+        // 驗證輸入
+        if (!timeValue || !taskValue.trim()) {
+            errorMsg.style.display = 'block';
+            return;
+        }
+        errorMsg.style.display = 'none';
+
+        // 建立新行程物件
+        const newTask = {
+            id: Date.now(),
+            time: timeValue,
+            title: taskValue.trim()
+        };
+
+        // 加入陣列並依照時間排序
+        tasks.push(newTask);
+        tasks.sort((a, b) => a.time.localeCompare(b.time));
+
+        // 儲存並重新渲染畫面
+        saveData();
+        renderTasks();
+
+        // 清空輸入框
+        timeInput.value = '';
+        taskInput.value = '';
+        taskInput.focus();
+    }
+
+    // 刪除行程
+    function deleteTask(id) {
+        tasks = tasks.filter(task => task.id !== id);
+        saveData();
+        renderTasks();
+    }
+
+    // 儲存資料到瀏覽器
+    function saveData() {
+        localStorage.setItem('myScheduleTasks', JSON.stringify(tasks));
+    }
+
+    // 渲染畫面
+    function renderTasks() {
+        const list = document.getElementById('scheduleList');
+        list.innerHTML = ''; // 先清空列表
+
+        if (tasks.length === 0) {
+            list.innerHTML = `
+                <div class="empty-state">
+                    <i class="fa-regular fa-face-smile-wink" style="font-size: 32px; margin-bottom: 12px; display: block; opacity: 0.5;"></i>
+                    目前還沒有行程，趕快新增一個吧！
+                </div>`;
+            return;
+        }
+
+        tasks.forEach(task => {
+            const li = document.createElement('li');
+            li.className = 'task-item';
+            li.innerHTML = `
+                <div class="task-dot"></div>
+                <div class="task-content">
+                    <div class="task-info">
+                        <span class="task-time"><i class="fa-regular fa-clock"></i> ${task.time}</span>
+                        <span class="task-title">${task.title}</span>
+                    </div>
+                    <button class="delete-btn" onclick="deleteTask(${task.id})" title="完成並刪除">
+                        <i class="fa-solid fa-check-circle"></i>
+                    </button>
+                </div>
+            `;
+            list.appendChild(li);
+        });
+    }
+</script>
+
+</body>
+</html>
