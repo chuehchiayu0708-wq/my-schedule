@@ -98,28 +98,36 @@
             margin-bottom: 12px;
         }
 
-        /* 日期選擇器樣式 */
-        .date-picker {
+        /* 日期選擇器下拉選單樣式 */
+        .date-selectors {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 5px;
+            color: white;
+            font-size: 16px;
+        }
+
+        .date-select {
             background: rgba(255, 255, 255, 0.2);
             border: 1px solid rgba(255, 255, 255, 0.3);
             color: white;
-            padding: 8px 15px;
+            padding: 6px 10px;
             border-radius: 8px;
-            font-size: 16px;
+            font-size: 15px;
             outline: none;
             cursor: pointer;
             font-family: inherit;
             transition: background 0.2s;
-            text-align: center;
         }
         
-        .date-picker:hover {
+        .date-select:hover {
             background: rgba(255, 255, 255, 0.3);
         }
 
-        .date-picker::-webkit-calendar-picker-indicator {
-            filter: invert(1);
-            cursor: pointer;
+        .date-select option {
+            background-color: var(--surface);
+            color: var(--text-main);
         }
 
         .input-section {
@@ -149,14 +157,27 @@
             border-color: var(--primary);
         }
 
-        input[type="time"] {
-            width: 120px;
+        /* 時間選擇器下拉選單樣式 */
+        .time-selectors {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .time-select {
+            padding: 12px 5px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            font-size: 14px;
+            outline: none;
+            background-color: var(--input-bg);
+            color: var(--text-main);
+            transition: border-color 0.2s, background-color 0.3s, color 0.3s;
             cursor: pointer;
         }
 
-        /* 修正深色模式下時間選擇器的 icon 顏色 */
-        [data-theme="dark"] input[type="time"]::-webkit-calendar-picker-indicator {
-            filter: invert(1);
+        .time-select:focus {
+            border-color: var(--primary);
         }
 
         input[type="text"] {
@@ -255,13 +276,15 @@
         .task-info {
             display: flex;
             flex-direction: column;
+            flex-grow: 1;
+            padding-right: 15px;
         }
 
         .task-time {
-            font-size: 12px;
-            color: var(--text-muted);
+            font-size: 13px;
+            color: var(--primary);
             margin-bottom: 4px;
-            font-weight: 600;
+            font-weight: 700;
             display: flex;
             align-items: center;
             gap: 5px;
@@ -274,19 +297,54 @@
             word-break: break-all;
         }
 
-        .delete-btn {
+        /* 編輯與刪除的動作區塊 */
+        .task-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .action-btn {
             background: none;
             border: none;
             color: var(--text-muted);
             cursor: pointer;
-            font-size: 18px;
-            padding: 5px;
-            transition: color 0.2s;
-            opacity: 0.5;
+            font-size: 16px;
+            padding: 8px;
+            border-radius: 8px;
+            transition: all 0.2s;
+            opacity: 0.6;
+        }
+
+        .action-btn:hover {
+            background-color: var(--bg);
+            opacity: 1;
+        }
+
+        .check-btn:hover {
+            color: #10b981; /* 綠色 */
+        }
+
+        .edit-btn:hover {
+            color: var(--primary);
         }
 
         .delete-btn:hover {
             color: var(--danger);
+        }
+
+        /* 完成狀態的樣式 */
+        .task-completed .task-title {
+            text-decoration: line-through;
+            color: var(--text-muted);
+        }
+
+        .task-completed .task-dot {
+            background-color: #10b981;
+            box-shadow: 0 0 0 1px #10b981;
+        }
+
+        .task-completed .check-btn {
+            color: #10b981;
             opacity: 1;
         }
 
@@ -317,13 +375,22 @@
             <i class="fa-solid fa-moon"></i>
         </button>
         <h1 id="headerTitle"><i class="fa-solid fa-calendar-days"></i> 行程管理</h1>
-        <!-- 加入日期選擇器 -->
-        <input type="date" id="datePicker" class="date-picker" onchange="changeDate()">
+        <!-- 下拉式日期選擇器 -->
+        <div class="date-selectors">
+            <select id="yearSelect" class="date-select" onchange="handleYearMonthChange()"></select> 年
+            <select id="monthSelect" class="date-select" onchange="handleYearMonthChange()"></select> 月
+            <select id="daySelect" class="date-select" onchange="changeDate()"></select> 日
+        </div>
     </div>
 
     <div class="input-section">
         <div class="input-group">
-            <input type="time" id="timeInput" required>
+            <!-- 下拉式 24小時制 時間選擇器 -->
+            <div class="time-selectors">
+                <select id="hourSelect" class="time-select"></select>
+                <span>:</span>
+                <select id="minuteSelect" class="time-select"></select>
+            </div>
             <input type="text" id="taskInput" placeholder="準備做什麼呢？" required onkeypress="handleKeyPress(event)">
             <button class="add-btn" onclick="addTask()"><i class="fa-solid fa-plus"></i></button>
         </div>
@@ -373,18 +440,74 @@
         }
     }
 
+    // 初始化下拉選單選項
+    function initSelectors() {
+        // 初始化小時 (00~23)
+        const hourSelect = document.getElementById('hourSelect');
+        for(let i = 0; i < 24; i++) {
+            const val = i.toString().padStart(2, '0');
+            hourSelect.add(new Option(val, val));
+        }
+
+        // 初始化分鐘 (00~59)
+        const minuteSelect = document.getElementById('minuteSelect');
+        for(let i = 0; i < 60; i++) {
+            const val = i.toString().padStart(2, '0');
+            minuteSelect.add(new Option(val, val));
+        }
+
+        // 初始化年份 (今年前後2年)
+        const yearSelect = document.getElementById('yearSelect');
+        const currentYear = new Date().getFullYear();
+        for(let i = currentYear - 2; i <= currentYear + 2; i++) {
+            yearSelect.add(new Option(i, i));
+        }
+
+        // 初始化月份 (01~12)
+        const monthSelect = document.getElementById('monthSelect');
+        for(let i = 1; i <= 12; i++) {
+            const val = i.toString().padStart(2, '0');
+            monthSelect.add(new Option(val, val));
+        }
+    }
+
+    // 根據年月更新日期下拉選單 (大月31, 小月30, 2月28/29)
+    function updateDays() {
+        const year = parseInt(document.getElementById('yearSelect').value);
+        const month = parseInt(document.getElementById('monthSelect').value);
+        const daySelect = document.getElementById('daySelect');
+        
+        // 記住原本選擇的日子，避免切換月份時跑掉
+        const currentSelectedDay = daySelect.value;
+        
+        daySelect.innerHTML = ''; // 清空選項
+        const daysInMonth = new Date(year, month, 0).getDate(); // 取得該月有幾天
+        
+        for(let i = 1; i <= daysInMonth; i++) {
+            const val = i.toString().padStart(2, '0');
+            daySelect.add(new Option(val, val));
+        }
+
+        // 如果原本選的日子在新的月份也存在，就保留選擇
+        if(currentSelectedDay && parseInt(currentSelectedDay) <= daysInMonth) {
+            daySelect.value = currentSelectedDay;
+        }
+    }
+
     // 初始化日期為今天
     function initDate() {
-        const datePicker = document.getElementById('datePicker');
         const today = new Date();
-        
-        // 將日期格式化為 YYYY-MM-DD 以符合 input type="date" 的要求
         const yyyy = today.getFullYear();
         const mm = String(today.getMonth() + 1).padStart(2, '0');
         const dd = String(today.getDate()).padStart(2, '0');
         
+        // 設定選單為今天
+        document.getElementById('yearSelect').value = yyyy;
+        document.getElementById('monthSelect').value = mm;
+        updateDays(); // 先生成天數選項
+        document.getElementById('daySelect').value = dd;
+        
         currentDate = `${yyyy}-${mm}-${dd}`;
-        datePicker.value = currentDate;
     }
 
     // 載入資料 (包含新舊版本轉移)
@@ -407,14 +530,24 @@
     // 網頁載入時執行
     window.onload = function() {
         initTheme();
+        initSelectors();
         initDate();
         loadData();
         renderTasks();
     }
 
+    // 當使用者切換年月時觸發
+    function handleYearMonthChange() {
+        updateDays();
+        changeDate();
+    }
+
     // 當使用者切換日期時觸發
     function changeDate() {
-        currentDate = document.getElementById('datePicker').value;
+        const yyyy = document.getElementById('yearSelect').value;
+        const mm = document.getElementById('monthSelect').value;
+        const dd = document.getElementById('daySelect').value;
+        currentDate = `${yyyy}-${mm}-${dd}`;
         renderTasks();
     }
 
@@ -427,14 +560,17 @@
 
     // 新增行程
     function addTask() {
-        const timeInput = document.getElementById('timeInput');
+        const hourSelect = document.getElementById('hourSelect');
+        const minuteSelect = document.getElementById('minuteSelect');
         const taskInput = document.getElementById('taskInput');
         const errorMsg = document.getElementById('errorMsg');
-        const timeValue = timeInput.value;
+        
+        // 組合出 HH:mm 的 24 小時制時間字串
+        const timeValue = `${hourSelect.value}:${minuteSelect.value}`;
         const taskValue = taskInput.value;
 
         // 驗證輸入
-        if (!timeValue || !taskValue.trim()) {
+        if (!taskValue.trim()) {
             errorMsg.style.display = 'block';
             return;
         }
@@ -443,8 +579,9 @@
         // 建立新行程物件
         const newTask = {
             id: Date.now(),
-            time: timeValue,
-            title: taskValue.trim()
+            time: timeValue, // 存入的格式為 "HH:mm" (24小時制)
+            title: taskValue.trim(),
+            isCompleted: false // 新增：預設為未完成
         };
 
         // 如果該日期還沒有陣列，先建立一個空陣列
@@ -460,24 +597,60 @@
         saveData();
         renderTasks();
 
-        // 清空輸入框
-        timeInput.value = '';
+        // 清空輸入框 (保留選擇的時間，方便接續輸入)
         taskInput.value = '';
         taskInput.focus();
+    }
+
+    // 編輯行程功能
+    function editTask(id) {
+        if (!allTasks[currentDate]) return;
+        
+        // 找出要編輯的項目
+        const taskIndex = allTasks[currentDate].findIndex(task => task.id === id);
+        if (taskIndex === -1) return;
+
+        const currentTitle = allTasks[currentDate][taskIndex].title;
+        
+        // 跳出對話框讓使用者修改文字
+        const newTitle = prompt('✏️ 修改行程內容：', currentTitle);
+
+        // 如果有輸入新的內容（而且不是按取消）
+        if (newTitle !== null && newTitle.trim() !== '') {
+            allTasks[currentDate][taskIndex].title = newTitle.trim();
+            saveData();
+            renderTasks();
+        }
+    }
+
+    // 切換完成狀態功能
+    function toggleComplete(id) {
+        if (!allTasks[currentDate]) return;
+        
+        const taskIndex = allTasks[currentDate].findIndex(task => task.id === id);
+        if (taskIndex !== -1) {
+            // 將狀態反轉 (未完成變完成，完成變未完成)
+            allTasks[currentDate][taskIndex].isCompleted = !allTasks[currentDate][taskIndex].isCompleted;
+            saveData();
+            renderTasks();
+        }
     }
 
     // 刪除行程
     function deleteTask(id) {
         if (allTasks[currentDate]) {
-            allTasks[currentDate] = allTasks[currentDate].filter(task => task.id !== id);
-            
-            // 如果該天沒有任何行程了，為了乾淨可以把那個日期的 key 刪掉
-            if (allTasks[currentDate].length === 0) {
-                delete allTasks[currentDate];
+            // 加入刪除確認提示，避免誤觸
+            if (confirm('確定要刪除這個行程嗎？')) {
+                allTasks[currentDate] = allTasks[currentDate].filter(task => task.id !== id);
+                
+                // 如果該天沒有任何行程了，為了乾淨可以把那個日期的 key 刪掉
+                if (allTasks[currentDate].length === 0) {
+                    delete allTasks[currentDate];
+                }
+                
+                saveData();
+                renderTasks();
             }
-            
-            saveData();
-            renderTasks();
         }
     }
 
@@ -505,7 +678,8 @@
 
         tasksToRender.forEach(task => {
             const li = document.createElement('li');
-            li.className = 'task-item';
+            li.className = `task-item ${task.isCompleted ? 'task-completed' : ''}`;
+            // 將 time 的字串稍微處理一下，確保看起來更整齊
             li.innerHTML = `
                 <div class="task-dot"></div>
                 <div class="task-content">
@@ -513,9 +687,20 @@
                         <span class="task-time"><i class="fa-regular fa-clock"></i> ${task.time}</span>
                         <span class="task-title">${task.title}</span>
                     </div>
-                    <button class="delete-btn" onclick="deleteTask(${task.id})" title="完成並刪除">
-                        <i class="fa-solid fa-check-circle"></i>
-                    </button>
+                    <div class="task-actions">
+                        <!-- 打勾(完成)按鈕 -->
+                        <button class="action-btn check-btn" onclick="toggleComplete(${task.id})" title="${task.isCompleted ? '取消完成' : '標記完成'}">
+                            <i class="fa-solid fa-check"></i>
+                        </button>
+                        <!-- 編輯按鈕 -->
+                        <button class="action-btn edit-btn" onclick="editTask(${task.id})" title="編輯文字">
+                            <i class="fa-solid fa-pen-to-square"></i>
+                        </button>
+                        <!-- 垃圾桶按鈕 -->
+                        <button class="action-btn delete-btn" onclick="deleteTask(${task.id})" title="刪除行程">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </div>
                 </div>
             `;
             list.appendChild(li);
