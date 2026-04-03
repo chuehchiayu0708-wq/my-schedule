@@ -95,12 +95,31 @@
         .header h1 {
             font-size: 24px;
             font-weight: 600;
-            margin-bottom: 5px;
+            margin-bottom: 12px;
         }
 
-        .header p {
-            font-size: 14px;
-            opacity: 0.8;
+        /* 日期選擇器樣式 */
+        .date-picker {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 8px;
+            font-size: 16px;
+            outline: none;
+            cursor: pointer;
+            font-family: inherit;
+            transition: background 0.2s;
+            text-align: center;
+        }
+        
+        .date-picker:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .date-picker::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+            cursor: pointer;
         }
 
         .input-section {
@@ -135,7 +154,7 @@
             cursor: pointer;
         }
 
-        /* 修正深色模式下時間選擇器的 icon 顏色 (針對支援的瀏覽器) */
+        /* 修正深色模式下時間選擇器的 icon 顏色 */
         [data-theme="dark"] input[type="time"]::-webkit-calendar-picker-indicator {
             filter: invert(1);
         }
@@ -297,8 +316,9 @@
         <button class="theme-toggle" id="themeToggleBtn" onclick="toggleTheme()" title="切換深色模式">
             <i class="fa-solid fa-moon"></i>
         </button>
-        <h1><i class="fa-solid fa-calendar-check"></i> 今日行程</h1>
-        <p id="dateDisplay">載入日期中...</p>
+        <h1 id="headerTitle"><i class="fa-solid fa-calendar-days"></i> 行程管理</h1>
+        <!-- 加入日期選擇器 -->
+        <input type="date" id="datePicker" class="date-picker" onchange="changeDate()">
     </div>
 
     <div class="input-section">
@@ -318,14 +338,9 @@
 </div>
 
 <script>
-    // 顯示今天日期
-    const dateDisplay = document.getElementById('dateDisplay');
-    const today = new Date();
-    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-    dateDisplay.innerText = today.toLocaleDateString('zh-TW', options);
-
-    // 行程資料陣列
-    let tasks = [];
+    // 所有的行程資料：以日期為 key 來儲存 (例如: {"2023-10-25": [{...}], "2023-10-26": [{...}]})
+    let allTasks = {};
+    let currentDate = ''; // 紀錄目前選擇的日期
 
     // 主題設定 (Light / Dark Mode)
     function initTheme() {
@@ -358,13 +373,48 @@
         }
     }
 
+    // 初始化日期為今天
+    function initDate() {
+        const datePicker = document.getElementById('datePicker');
+        const today = new Date();
+        
+        // 將日期格式化為 YYYY-MM-DD 以符合 input type="date" 的要求
+        const yyyy = today.getFullYear();
+        const mm = String(today.getMonth() + 1).padStart(2, '0');
+        const dd = String(today.getDate()).padStart(2, '0');
+        
+        currentDate = `${yyyy}-${mm}-${dd}`;
+        datePicker.value = currentDate;
+    }
+
+    // 載入資料 (包含新舊版本轉移)
+    function loadData() {
+        const savedAllTasks = localStorage.getItem('myScheduleAllTasks');
+        
+        if (savedAllTasks) {
+            allTasks = JSON.parse(savedAllTasks);
+        } else {
+            // 無痛升級：如果你之前有儲存過「單日」的行程，把它轉移到「今天」的日期下
+            const oldTasks = localStorage.getItem('myScheduleTasks');
+            if (oldTasks) {
+                allTasks[currentDate] = JSON.parse(oldTasks);
+                saveData(); // 儲存新格式
+                localStorage.removeItem('myScheduleTasks'); // 清除舊格式
+            }
+        }
+    }
+
     // 網頁載入時執行
     window.onload = function() {
         initTheme();
-        const savedTasks = localStorage.getItem('myScheduleTasks');
-        if (savedTasks) {
-            tasks = JSON.parse(savedTasks);
-        }
+        initDate();
+        loadData();
+        renderTasks();
+    }
+
+    // 當使用者切換日期時觸發
+    function changeDate() {
+        currentDate = document.getElementById('datePicker').value;
         renderTasks();
     }
 
@@ -397,9 +447,14 @@
             title: taskValue.trim()
         };
 
+        // 如果該日期還沒有陣列，先建立一個空陣列
+        if (!allTasks[currentDate]) {
+            allTasks[currentDate] = [];
+        }
+
         // 加入陣列並依照時間排序
-        tasks.push(newTask);
-        tasks.sort((a, b) => a.time.localeCompare(b.time));
+        allTasks[currentDate].push(newTask);
+        allTasks[currentDate].sort((a, b) => a.time.localeCompare(b.time));
 
         // 儲存並重新渲染畫面
         saveData();
@@ -413,31 +468,42 @@
 
     // 刪除行程
     function deleteTask(id) {
-        tasks = tasks.filter(task => task.id !== id);
-        saveData();
-        renderTasks();
+        if (allTasks[currentDate]) {
+            allTasks[currentDate] = allTasks[currentDate].filter(task => task.id !== id);
+            
+            // 如果該天沒有任何行程了，為了乾淨可以把那個日期的 key 刪掉
+            if (allTasks[currentDate].length === 0) {
+                delete allTasks[currentDate];
+            }
+            
+            saveData();
+            renderTasks();
+        }
     }
 
-    // 儲存資料到瀏覽器
+    // 儲存所有資料到瀏覽器
     function saveData() {
-        localStorage.setItem('myScheduleTasks', JSON.stringify(tasks));
+        localStorage.setItem('myScheduleAllTasks', JSON.stringify(allTasks));
     }
 
-    // 渲染畫面
+    // 渲染特定日期的畫面
     function renderTasks() {
         const list = document.getElementById('scheduleList');
         list.innerHTML = ''; // 先清空列表
+        
+        // 取得目前選擇日期的行程陣列，如果沒有就給空陣列
+        const tasksToRender = allTasks[currentDate] || [];
 
-        if (tasks.length === 0) {
+        if (tasksToRender.length === 0) {
             list.innerHTML = `
                 <div class="empty-state">
-                    <i class="fa-regular fa-face-smile-wink" style="font-size: 32px; margin-bottom: 12px; display: block; opacity: 0.5;"></i>
-                    目前還沒有行程，趕快新增一個吧！
+                    <i class="fa-regular fa-calendar-xmark" style="font-size: 32px; margin-bottom: 12px; display: block; opacity: 0.5;"></i>
+                    這天還沒有行程，趕快新增一個吧！
                 </div>`;
             return;
         }
 
-        tasks.forEach(task => {
+        tasksToRender.forEach(task => {
             const li = document.createElement('li');
             li.className = 'task-item';
             li.innerHTML = `
