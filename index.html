@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>我的質感行程管理</title>
+    <title>我的質感行程管理 (雲端版)</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         /* 定義亮色與深色模式的顏色變數 */
@@ -59,16 +59,33 @@
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
             overflow: hidden;
             transition: background-color 0.3s;
+            position: relative;
         }
 
         .header {
             background: var(--header-gradient);
             color: white;
-            padding: 30px 20px;
+            padding: 30px 20px 20px 20px;
             text-align: center;
             position: relative;
             transition: background 0.3s;
         }
+
+        /* 雲端連線狀態指示 */
+        .sync-status {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-size: 12px;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 5px 10px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .sync-status i { color: #facc15; } /* 預設黃色載入中 */
+        .sync-status.connected i { color: #4ade80; } /* 綠色已連線 */
 
         /* 深色模式切換按鈕 */
         .theme-toggle {
@@ -96,6 +113,7 @@
             font-size: 24px;
             font-weight: 600;
             margin-bottom: 12px;
+            margin-top: 15px;
         }
 
         /* 日期選擇器下拉選單樣式 */
@@ -297,7 +315,6 @@
             word-break: break-all;
         }
 
-        /* 編輯與刪除的動作區塊 */
         .task-actions {
             display: flex;
             gap: 8px;
@@ -320,19 +337,10 @@
             opacity: 1;
         }
 
-        .check-btn:hover {
-            color: #10b981; /* 綠色 */
-        }
+        .check-btn:hover { color: #10b981; }
+        .edit-btn:hover { color: var(--primary); }
+        .delete-btn:hover { color: var(--danger); }
 
-        .edit-btn:hover {
-            color: var(--primary);
-        }
-
-        .delete-btn:hover {
-            color: var(--danger);
-        }
-
-        /* 完成狀態的樣式 */
         .task-completed .task-title {
             text-decoration: line-through;
             color: var(--text-muted);
@@ -356,13 +364,94 @@
             transition: color 0.3s;
         }
 
-        /* 隱藏卷軸但保留功能 */
-        .schedule-section::-webkit-scrollbar {
-            width: 6px;
+        /* 隱藏卷軸 */
+        .schedule-section::-webkit-scrollbar { width: 6px; }
+        .schedule-section::-webkit-scrollbar-thumb { background-color: var(--border); border-radius: 10px; }
+
+        /* =========================================
+           全螢幕通知 Modal 樣式
+           ========================================= */
+        .notification-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(8px);
+            z-index: 9999;
+            display: none; /* 預設隱藏，觸發時改為 flex */
+            justify-content: center;
+            align-items: center;
+            animation: fadeIn 0.3s;
         }
-        .schedule-section::-webkit-scrollbar-thumb {
-            background-color: var(--border);
-            border-radius: 10px;
+
+        .notification-card {
+            background-color: var(--surface);
+            padding: 40px;
+            border-radius: 24px;
+            text-align: center;
+            width: 90%;
+            max-width: 360px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            animation: popUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .notif-icon {
+            font-size: 70px;
+            color: var(--primary);
+            margin-bottom: 20px;
+            animation: ring 1.5s infinite;
+            transform-origin: top center;
+        }
+
+        .notif-time {
+            font-size: 20px;
+            color: var(--text-muted);
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .notif-title {
+            font-size: 24px;
+            color: var(--text-main);
+            font-weight: bold;
+            margin-bottom: 30px;
+            word-break: break-all;
+        }
+
+        .notif-btn {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            transition: background 0.2s;
+        }
+
+        .notif-btn:hover {
+            background-color: var(--primary-hover);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes popUp {
+            from { opacity: 0; transform: scale(0.8) translateY(20px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        @keyframes ring {
+            0% { transform: rotate(0); }
+            10% { transform: rotate(15deg); }
+            20% { transform: rotate(-10deg); }
+            30% { transform: rotate(5deg); }
+            40% { transform: rotate(-5deg); }
+            50% { transform: rotate(0); }
+            100% { transform: rotate(0); }
         }
     </style>
 </head>
@@ -370,11 +459,17 @@
 
 <div class="app-container">
     <div class="header">
+        <!-- 雲端連線狀態 -->
+        <div id="syncStatus" class="sync-status">
+            <i class="fa-solid fa-cloud"></i> 載入中...
+        </div>
+
         <!-- 深色模式切換按鈕 -->
         <button class="theme-toggle" id="themeToggleBtn" onclick="toggleTheme()" title="切換深色模式">
             <i class="fa-solid fa-moon"></i>
         </button>
         <h1 id="headerTitle"><i class="fa-solid fa-calendar-days"></i> 行程管理</h1>
+        
         <!-- 下拉式日期選擇器 -->
         <div class="date-selectors">
             <select id="yearSelect" class="date-select" onchange="handleYearMonthChange()"></select> 年
@@ -404,12 +499,159 @@
     </div>
 </div>
 
-<script>
-    // 所有的行程資料：以日期為 key 來儲存 (例如: {"2023-10-25": [{...}], "2023-10-26": [{...}]})
-    let allTasks = {};
-    let currentDate = ''; // 紀錄目前選擇的日期
+<!-- =========================================
+     全螢幕通知覆蓋層 (預設隱藏)
+     ========================================= -->
+<div class="notification-overlay" id="notificationOverlay">
+    <div class="notification-card">
+        <i class="fa-regular fa-bell notif-icon"></i>
+        <div class="notif-time" id="notifTime">14:30</div>
+        <div class="notif-title" id="notifTitle">這是一個測試行程</div>
+        <button class="notif-btn" onclick="closeNotification()">我知道了！</button>
+    </div>
+</div>
 
-    // 主題設定 (Light / Dark Mode)
+<!-- =========================================
+     Firebase 與 應用程式邏輯模組
+     ========================================= -->
+<script type="module">
+    // 引入 Firebase 雲端資料庫 SDK
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    // 全域變數
+    let allTasks = {};
+    let currentDate = '';
+    let db, auth, userId, appId;
+    let isCloudSyncActive = false;
+
+    // ==========================================
+    // 1. 初始化環境與 Firebase 連線
+    // ==========================================
+    async function initFirebase() {
+        const syncStatusEl = document.getElementById('syncStatus');
+        
+        try {
+            // 使用你專屬的 Firebase 密鑰
+            const firebaseConfig = {
+                apiKey: "AIzaSyDT_IND0lDbZiI0GI2i5AslTszNjXcDNKs",
+                authDomain: "my-shcedule.firebaseapp.com",
+                projectId: "my-shcedule",
+                storageBucket: "my-shcedule.firebasestorage.app",
+                messagingSenderId: "299079790493",
+                appId: "1:299079790493:web:0f136c2486f5c159138974"
+            };
+            
+            const app = initializeApp(firebaseConfig);
+            auth = getAuth(app);
+            db = getFirestore(app);
+            
+            // 設定專屬的應用程式 ID
+            appId = "my-shcedule";
+
+            // 進行匿名登入 (確保能正確寫入資料庫)
+            await signInAnonymously(auth);
+
+            // 監聽登入狀態並開啟資料庫連線
+            onAuthStateChanged(auth, (user) => {
+                if (user) {
+                    userId = user.uid;
+                    isCloudSyncActive = true;
+                    syncStatusEl.innerHTML = '<i class="fa-solid fa-cloud"></i> 雲端已同步';
+                    syncStatusEl.classList.add('connected');
+                    listenToCloudTasks(); // 啟動雲端即時監聽
+                }
+            });
+        } catch (error) {
+            // 如果連線失敗，降級回單機模式
+            console.error("Firebase 連線發生錯誤:", error);
+            isCloudSyncActive = false;
+            syncStatusEl.innerHTML = '<i class="fa-solid fa-laptop"></i> 單機模式';
+            syncStatusEl.classList.remove('connected');
+            loadLocalData();
+            renderTasks();
+        }
+    }
+
+    // ==========================================
+    // 2. 雲端資料同步邏輯
+    // ==========================================
+    function listenToCloudTasks() {
+        if (!userId) return;
+        
+        // 嚴格遵守安全性規則路徑：/artifacts/{appId}/users/{userId}/tasks
+        const tasksRef = collection(db, 'artifacts', appId, 'users', userId, 'tasks');
+        
+        onSnapshot(tasksRef, (snapshot) => {
+            allTasks = {}; // 清空並重新從雲端組合
+            
+            snapshot.forEach(docSnap => {
+                const task = docSnap.data();
+                // 用日期分類存進記憶體
+                if (!allTasks[task.date]) {
+                    allTasks[task.date] = [];
+                }
+                allTasks[task.date].push(task);
+            });
+
+            // 為每一天的行程依照時間排序
+            Object.keys(allTasks).forEach(date => {
+                allTasks[date].sort((a, b) => a.time.localeCompare(b.time));
+            });
+
+            renderTasks();
+        }, (error) => {
+            console.error("雲端同步發生錯誤:", error);
+        });
+    }
+
+    // 儲存/更新單一行程到雲端 (或單機)
+    async function saveTask(task) {
+        if (isCloudSyncActive) {
+            // 存入 Firebase
+            const docRef = doc(db, 'artifacts', appId, 'users', userId, 'tasks', task.id.toString());
+            await setDoc(docRef, task);
+        } else {
+            // 存入 LocalStorage (單機模式)
+            if (!allTasks[task.date]) allTasks[task.date] = [];
+            
+            // 檢查是否已存在 (編輯或更新狀態)
+            const index = allTasks[task.date].findIndex(t => t.id === task.id);
+            if(index !== -1) {
+                allTasks[task.date][index] = task;
+            } else {
+                allTasks[task.date].push(task);
+            }
+            allTasks[task.date].sort((a, b) => a.time.localeCompare(b.time));
+            localStorage.setItem('myScheduleAllTasks', JSON.stringify(allTasks));
+            renderTasks();
+        }
+    }
+
+    // 刪除單一行程
+    async function removeTask(task) {
+        if (isCloudSyncActive) {
+            const docRef = doc(db, 'artifacts', appId, 'users', userId, 'tasks', task.id.toString());
+            await deleteDoc(docRef);
+        } else {
+            if (allTasks[task.date]) {
+                allTasks[task.date] = allTasks[task.date].filter(t => t.id !== task.id);
+                if (allTasks[task.date].length === 0) delete allTasks[task.date];
+                localStorage.setItem('myScheduleAllTasks', JSON.stringify(allTasks));
+                renderTasks();
+            }
+        }
+    }
+
+    function loadLocalData() {
+        const saved = localStorage.getItem('myScheduleAllTasks');
+        if (saved) allTasks = JSON.parse(saved);
+    }
+
+    // ==========================================
+    // 3. UI 與功能邏輯
+    // ==========================================
     function initTheme() {
         const savedTheme = localStorage.getItem('myScheduleTheme');
         const html = document.documentElement;
@@ -424,12 +666,10 @@
         }
     }
 
-    function toggleTheme() {
+    window.toggleTheme = function() {
         const html = document.documentElement;
-        const currentTheme = html.getAttribute('data-theme');
         const toggleIcon = document.querySelector('#themeToggleBtn i');
-
-        if (currentTheme === 'light') {
+        if (html.getAttribute('data-theme') === 'light') {
             html.setAttribute('data-theme', 'dark');
             localStorage.setItem('myScheduleTheme', 'dark');
             toggleIcon.className = 'fa-solid fa-sun';
@@ -440,30 +680,25 @@
         }
     }
 
-    // 初始化下拉選單選項
     function initSelectors() {
-        // 初始化小時 (00~23)
         const hourSelect = document.getElementById('hourSelect');
         for(let i = 0; i < 24; i++) {
             const val = i.toString().padStart(2, '0');
             hourSelect.add(new Option(val, val));
         }
 
-        // 初始化分鐘 (00~59)
         const minuteSelect = document.getElementById('minuteSelect');
-        for(let i = 0; i < 60; i++) {
+        for(let i = 0; i < 60; i += 5) { // 為了方便，分鐘間隔設為 5
             const val = i.toString().padStart(2, '0');
             minuteSelect.add(new Option(val, val));
         }
 
-        // 初始化年份 (今年前後2年)
         const yearSelect = document.getElementById('yearSelect');
         const currentYear = new Date().getFullYear();
-        for(let i = currentYear - 2; i <= currentYear + 2; i++) {
+        for(let i = currentYear - 1; i <= currentYear + 3; i++) {
             yearSelect.add(new Option(i, i));
         }
 
-        // 初始化月份 (01~12)
         const monthSelect = document.getElementById('monthSelect');
         for(let i = 1; i <= 12; i++) {
             const val = i.toString().padStart(2, '0');
@@ -471,200 +706,116 @@
         }
     }
 
-    // 根據年月更新日期下拉選單 (大月31, 小月30, 2月28/29)
     function updateDays() {
         const year = parseInt(document.getElementById('yearSelect').value);
         const month = parseInt(document.getElementById('monthSelect').value);
         const daySelect = document.getElementById('daySelect');
-        
-        // 記住原本選擇的日子，避免切換月份時跑掉
         const currentSelectedDay = daySelect.value;
         
-        daySelect.innerHTML = ''; // 清空選項
-        const daysInMonth = new Date(year, month, 0).getDate(); // 取得該月有幾天
+        daySelect.innerHTML = ''; 
+        const daysInMonth = new Date(year, month, 0).getDate(); 
         
         for(let i = 1; i <= daysInMonth; i++) {
             const val = i.toString().padStart(2, '0');
             daySelect.add(new Option(val, val));
         }
 
-        // 如果原本選的日子在新的月份也存在，就保留選擇
         if(currentSelectedDay && parseInt(currentSelectedDay) <= daysInMonth) {
             daySelect.value = currentSelectedDay;
         }
     }
 
-    // 初始化日期為今天
     function initDate() {
         const today = new Date();
-        const yyyy = today.getFullYear();
-        const mm = String(today.getMonth() + 1).padStart(2, '0');
-        const dd = String(today.getDate()).padStart(2, '0');
-        
-        // 設定選單為今天
-        document.getElementById('yearSelect').value = yyyy;
-        document.getElementById('monthSelect').value = mm;
-        updateDays(); // 先生成天數選項
-        document.getElementById('daySelect').value = dd;
-        
-        currentDate = `${yyyy}-${mm}-${dd}`;
+        document.getElementById('yearSelect').value = today.getFullYear();
+        document.getElementById('monthSelect').value = String(today.getMonth() + 1).padStart(2, '0');
+        updateDays(); 
+        document.getElementById('daySelect').value = String(today.getDate()).padStart(2, '0');
+        updateCurrentDateStr();
     }
 
-    // 載入資料 (包含新舊版本轉移)
-    function loadData() {
-        const savedAllTasks = localStorage.getItem('myScheduleAllTasks');
-        
-        if (savedAllTasks) {
-            allTasks = JSON.parse(savedAllTasks);
-        } else {
-            // 無痛升級：如果你之前有儲存過「單日」的行程，把它轉移到「今天」的日期下
-            const oldTasks = localStorage.getItem('myScheduleTasks');
-            if (oldTasks) {
-                allTasks[currentDate] = JSON.parse(oldTasks);
-                saveData(); // 儲存新格式
-                localStorage.removeItem('myScheduleTasks'); // 清除舊格式
-            }
-        }
-    }
-
-    // 網頁載入時執行
-    window.onload = function() {
-        initTheme();
-        initSelectors();
-        initDate();
-        loadData();
-        renderTasks();
-    }
-
-    // 當使用者切換年月時觸發
-    function handleYearMonthChange() {
-        updateDays();
-        changeDate();
-    }
-
-    // 當使用者切換日期時觸發
-    function changeDate() {
+    function updateCurrentDateStr() {
         const yyyy = document.getElementById('yearSelect').value;
         const mm = document.getElementById('monthSelect').value;
         const dd = document.getElementById('daySelect').value;
         currentDate = `${yyyy}-${mm}-${dd}`;
+    }
+
+    window.handleYearMonthChange = function() {
+        updateDays();
+        window.changeDate();
+    }
+
+    window.changeDate = function() {
+        updateCurrentDateStr();
         renderTasks();
     }
 
-    // 按下 Enter 鍵也可以新增
-    function handleKeyPress(event) {
-        if (event.key === 'Enter') {
-            addTask();
-        }
+    window.handleKeyPress = function(event) {
+        if (event.key === 'Enter') window.addTask();
     }
 
-    // 新增行程
-    function addTask() {
-        const hourSelect = document.getElementById('hourSelect');
-        const minuteSelect = document.getElementById('minuteSelect');
+    window.addTask = function() {
+        const hour = document.getElementById('hourSelect').value;
+        const minute = document.getElementById('minuteSelect').value;
         const taskInput = document.getElementById('taskInput');
         const errorMsg = document.getElementById('errorMsg');
-        
-        // 組合出 HH:mm 的 24 小時制時間字串
-        const timeValue = `${hourSelect.value}:${minuteSelect.value}`;
-        const taskValue = taskInput.value;
+        const taskValue = taskInput.value.trim();
 
-        // 驗證輸入
-        if (!taskValue.trim()) {
+        if (!taskValue) {
             errorMsg.style.display = 'block';
             return;
         }
         errorMsg.style.display = 'none';
 
-        // 建立新行程物件
         const newTask = {
             id: Date.now(),
-            time: timeValue, // 存入的格式為 "HH:mm" (24小時制)
-            title: taskValue.trim(),
-            isCompleted: false // 新增：預設為未完成
+            date: currentDate, // 加上日期欄位，方便雲端分辨
+            time: `${hour}:${minute}`,
+            title: taskValue,
+            isCompleted: false,
+            isNotified: false // 判斷是否已經通知過
         };
 
-        // 如果該日期還沒有陣列，先建立一個空陣列
-        if (!allTasks[currentDate]) {
-            allTasks[currentDate] = [];
-        }
+        saveTask(newTask);
 
-        // 加入陣列並依照時間排序
-        allTasks[currentDate].push(newTask);
-        allTasks[currentDate].sort((a, b) => a.time.localeCompare(b.time));
-
-        // 儲存並重新渲染畫面
-        saveData();
-        renderTasks();
-
-        // 清空輸入框 (保留選擇的時間，方便接續輸入)
         taskInput.value = '';
         taskInput.focus();
     }
 
-    // 編輯行程功能
-    function editTask(id) {
-        if (!allTasks[currentDate]) return;
-        
-        // 找出要編輯的項目
-        const taskIndex = allTasks[currentDate].findIndex(task => task.id === id);
-        if (taskIndex === -1) return;
+    window.editTask = function(id) {
+        const taskList = allTasks[currentDate] || [];
+        const task = taskList.find(t => t.id === id);
+        if (!task) return;
 
-        const currentTitle = allTasks[currentDate][taskIndex].title;
-        
-        // 跳出對話框讓使用者修改文字
-        const newTitle = prompt('✏️ 修改行程內容：', currentTitle);
-
-        // 如果有輸入新的內容（而且不是按取消）
+        const newTitle = prompt('✏️ 修改行程內容：', task.title);
         if (newTitle !== null && newTitle.trim() !== '') {
-            allTasks[currentDate][taskIndex].title = newTitle.trim();
-            saveData();
-            renderTasks();
+            task.title = newTitle.trim();
+            saveTask(task);
         }
     }
 
-    // 切換完成狀態功能
-    function toggleComplete(id) {
-        if (!allTasks[currentDate]) return;
-        
-        const taskIndex = allTasks[currentDate].findIndex(task => task.id === id);
-        if (taskIndex !== -1) {
-            // 將狀態反轉 (未完成變完成，完成變未完成)
-            allTasks[currentDate][taskIndex].isCompleted = !allTasks[currentDate][taskIndex].isCompleted;
-            saveData();
-            renderTasks();
+    window.toggleComplete = function(id) {
+        const taskList = allTasks[currentDate] || [];
+        const task = taskList.find(t => t.id === id);
+        if (task) {
+            task.isCompleted = !task.isCompleted;
+            saveTask(task);
         }
     }
 
-    // 刪除行程
-    function deleteTask(id) {
-        if (allTasks[currentDate]) {
-            // 加入刪除確認提示，避免誤觸
-            if (confirm('確定要刪除這個行程嗎？')) {
-                allTasks[currentDate] = allTasks[currentDate].filter(task => task.id !== id);
-                
-                // 如果該天沒有任何行程了，為了乾淨可以把那個日期的 key 刪掉
-                if (allTasks[currentDate].length === 0) {
-                    delete allTasks[currentDate];
-                }
-                
-                saveData();
-                renderTasks();
-            }
+    window.deleteTask = function(id) {
+        const taskList = allTasks[currentDate] || [];
+        const task = taskList.find(t => t.id === id);
+        if (task && confirm('確定要刪除這個行程嗎？')) {
+            removeTask(task);
         }
     }
 
-    // 儲存所有資料到瀏覽器
-    function saveData() {
-        localStorage.setItem('myScheduleAllTasks', JSON.stringify(allTasks));
-    }
-
-    // 渲染特定日期的畫面
     function renderTasks() {
         const list = document.getElementById('scheduleList');
-        list.innerHTML = ''; // 先清空列表
+        list.innerHTML = ''; 
         
-        // 取得目前選擇日期的行程陣列，如果沒有就給空陣列
         const tasksToRender = allTasks[currentDate] || [];
 
         if (tasksToRender.length === 0) {
@@ -679,7 +830,6 @@
         tasksToRender.forEach(task => {
             const li = document.createElement('li');
             li.className = `task-item ${task.isCompleted ? 'task-completed' : ''}`;
-            // 將 time 的字串稍微處理一下，確保看起來更整齊
             li.innerHTML = `
                 <div class="task-dot"></div>
                 <div class="task-content">
@@ -688,16 +838,13 @@
                         <span class="task-title">${task.title}</span>
                     </div>
                     <div class="task-actions">
-                        <!-- 打勾(完成)按鈕 -->
-                        <button class="action-btn check-btn" onclick="toggleComplete(${task.id})" title="${task.isCompleted ? '取消完成' : '標記完成'}">
+                        <button class="action-btn check-btn" onclick="toggleComplete(${task.id})" title="完成">
                             <i class="fa-solid fa-check"></i>
                         </button>
-                        <!-- 編輯按鈕 -->
-                        <button class="action-btn edit-btn" onclick="editTask(${task.id})" title="編輯文字">
+                        <button class="action-btn edit-btn" onclick="editTask(${task.id})" title="編輯">
                             <i class="fa-solid fa-pen-to-square"></i>
                         </button>
-                        <!-- 垃圾桶按鈕 -->
-                        <button class="action-btn delete-btn" onclick="deleteTask(${task.id})" title="刪除行程">
+                        <button class="action-btn delete-btn" onclick="deleteTask(${task.id})" title="刪除">
                             <i class="fa-solid fa-trash-can"></i>
                         </button>
                     </div>
@@ -705,6 +852,60 @@
             `;
             list.appendChild(li);
         });
+    }
+
+    // ==========================================
+    // 4. 全螢幕通知計時器核心
+    // ==========================================
+    function checkNotifications() {
+        const now = new Date();
+        const yyyy = now.getFullYear();
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        const dd = String(now.getDate()).padStart(2, '0');
+        const todayStr = `${yyyy}-${mm}-${dd}`;
+        
+        const currentHH = String(now.getHours()).padStart(2, '0');
+        const currentMM = String(now.getMinutes()).padStart(2, '0');
+        const currentTimeStr = `${currentHH}:${currentMM}`;
+
+        // 檢查今天是否有行程
+        if (allTasks[todayStr]) {
+            allTasks[todayStr].forEach(task => {
+                // 條件：時間吻合 + 還沒完成 + 還沒通知過
+                if (task.time === currentTimeStr && !task.isCompleted && !task.isNotified) {
+                    triggerNotification(task);
+                }
+            });
+        }
+    }
+
+    function triggerNotification(task) {
+        // 立刻標記為已通知，並存回資料庫，避免在其他裝置重複彈出
+        task.isNotified = true;
+        saveTask(task);
+
+        // 顯示全螢幕 UI
+        const overlay = document.getElementById('notificationOverlay');
+        document.getElementById('notifTime').innerText = task.time;
+        document.getElementById('notifTitle').innerText = task.title;
+        overlay.style.display = 'flex';
+    }
+
+    window.closeNotification = function() {
+        document.getElementById('notificationOverlay').style.display = 'none';
+    }
+
+    // 每 10 秒檢查一次時間
+    setInterval(checkNotifications, 10000);
+
+    // ==========================================
+    // 5. 啟動應用程式
+    // ==========================================
+    window.onload = function() {
+        initTheme();
+        initSelectors();
+        initDate();
+        initFirebase(); // 開始連接資料庫
     }
 </script>
 
