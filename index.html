@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>我的計劃表</title>
+    <title>我的質感行程管理 (雲端版)</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         /* 定義亮色與深色模式的顏色變數 */
@@ -84,8 +84,8 @@
             align-items: center;
             gap: 6px;
         }
-        .sync-status i { color: #facc15; } /* 預設黃色載入中 */
-        .sync-status.connected i { color: #4ade80; } /* 綠色已連線 */
+        .sync-status i { color: #facc15; }
+        .sync-status.connected i { color: #4ade80; }
 
         /* 深色模式切換按鈕 */
         .theme-toggle {
@@ -377,7 +377,7 @@
             background-color: rgba(0, 0, 0, 0.75);
             backdrop-filter: blur(8px);
             z-index: 9999;
-            display: none; /* 預設隱藏，觸發時改為 flex */
+            display: none; 
             justify-content: center;
             align-items: center;
             animation: fadeIn 0.3s;
@@ -517,13 +517,13 @@
 <script type="module">
     // 引入 Firebase 雲端資料庫 SDK
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
     import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
     // 全域變數
     let allTasks = {};
     let currentDate = '';
-    let db, auth, userId, appId;
+    let db, auth, appId;
     let isCloudSyncActive = false;
 
     // ==========================================
@@ -533,7 +533,7 @@
         const syncStatusEl = document.getElementById('syncStatus');
         
         try {
-            // 使用你專屬的 Firebase 密鑰
+            // 使用你的專屬密鑰
             const firebaseConfig = {
                 apiKey: "AIzaSyDT_IND0lDbZiI0GI2i5AslTszNjXcDNKs",
                 authDomain: "my-shcedule.firebaseapp.com",
@@ -547,24 +547,20 @@
             auth = getAuth(app);
             db = getFirestore(app);
             
-            // 設定專屬的應用程式 ID
             appId = "my-shcedule";
 
-            // 進行匿名登入 (確保能正確寫入資料庫)
+            // 依然需要匿名登入才能獲得讀寫權限
             await signInAnonymously(auth);
 
-            // 監聽登入狀態並開啟資料庫連線
             onAuthStateChanged(auth, (user) => {
                 if (user) {
-                    userId = user.uid;
                     isCloudSyncActive = true;
-                    syncStatusEl.innerHTML = '<i class="fa-solid fa-cloud"></i> 雲端已同步';
+                    syncStatusEl.innerHTML = '<i class="fa-solid fa-cloud"></i> 跨裝置已同步';
                     syncStatusEl.classList.add('connected');
                     listenToCloudTasks(); // 啟動雲端即時監聽
                 }
             });
         } catch (error) {
-            // 如果連線失敗，降級回單機模式
             console.error("Firebase 連線發生錯誤:", error);
             isCloudSyncActive = false;
             syncStatusEl.innerHTML = '<i class="fa-solid fa-laptop"></i> 單機模式';
@@ -575,27 +571,23 @@
     }
 
     // ==========================================
-    // 2. 雲端資料同步邏輯
+    // 2. 雲端資料同步邏輯 (公開大廳版)
     // ==========================================
     function listenToCloudTasks() {
-        if (!userId) return;
-        
-        // 嚴格遵守安全性規則路徑：/artifacts/{appId}/users/{userId}/tasks
-        const tasksRef = collection(db, 'artifacts', appId, 'users', userId, 'tasks');
+        // ★ 核心修改：移除 userId，改存放到大家都看得到的 'public' 和 'data' 目錄下
+        const tasksRef = collection(db, 'artifacts', appId, 'public', 'data', 'tasks');
         
         onSnapshot(tasksRef, (snapshot) => {
-            allTasks = {}; // 清空並重新從雲端組合
+            allTasks = {}; 
             
             snapshot.forEach(docSnap => {
                 const task = docSnap.data();
-                // 用日期分類存進記憶體
                 if (!allTasks[task.date]) {
                     allTasks[task.date] = [];
                 }
                 allTasks[task.date].push(task);
             });
 
-            // 為每一天的行程依照時間排序
             Object.keys(allTasks).forEach(date => {
                 allTasks[date].sort((a, b) => a.time.localeCompare(b.time));
             });
@@ -606,17 +598,13 @@
         });
     }
 
-    // 儲存/更新單一行程到雲端 (或單機)
     async function saveTask(task) {
         if (isCloudSyncActive) {
-            // 存入 Firebase
-            const docRef = doc(db, 'artifacts', appId, 'users', userId, 'tasks', task.id.toString());
+            // ★ 對應修改：寫入路徑也改到公開位置
+            const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'tasks', task.id.toString());
             await setDoc(docRef, task);
         } else {
-            // 存入 LocalStorage (單機模式)
             if (!allTasks[task.date]) allTasks[task.date] = [];
-            
-            // 檢查是否已存在 (編輯或更新狀態)
             const index = allTasks[task.date].findIndex(t => t.id === task.id);
             if(index !== -1) {
                 allTasks[task.date][index] = task;
@@ -629,10 +617,10 @@
         }
     }
 
-    // 刪除單一行程
     async function removeTask(task) {
         if (isCloudSyncActive) {
-            const docRef = doc(db, 'artifacts', appId, 'users', userId, 'tasks', task.id.toString());
+            // ★ 對應修改：刪除路徑也改到公開位置
+            const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'tasks', task.id.toString());
             await deleteDoc(docRef);
         } else {
             if (allTasks[task.date]) {
@@ -688,7 +676,7 @@
         }
 
         const minuteSelect = document.getElementById('minuteSelect');
-        for(let i = 0; i < 60; i += 5) { // 為了方便，分鐘間隔設為 5
+        for(let i = 0; i < 60; i += 5) {
             const val = i.toString().padStart(2, '0');
             minuteSelect.add(new Option(val, val));
         }
@@ -770,11 +758,11 @@
 
         const newTask = {
             id: Date.now(),
-            date: currentDate, // 加上日期欄位，方便雲端分辨
+            date: currentDate,
             time: `${hour}:${minute}`,
             title: taskValue,
             isCompleted: false,
-            isNotified: false // 判斷是否已經通知過
+            isNotified: false
         };
 
         saveTask(newTask);
@@ -868,10 +856,8 @@
         const currentMM = String(now.getMinutes()).padStart(2, '0');
         const currentTimeStr = `${currentHH}:${currentMM}`;
 
-        // 檢查今天是否有行程
         if (allTasks[todayStr]) {
             allTasks[todayStr].forEach(task => {
-                // 條件：時間吻合 + 還沒完成 + 還沒通知過
                 if (task.time === currentTimeStr && !task.isCompleted && !task.isNotified) {
                     triggerNotification(task);
                 }
@@ -880,11 +866,9 @@
     }
 
     function triggerNotification(task) {
-        // 立刻標記為已通知，並存回資料庫，避免在其他裝置重複彈出
         task.isNotified = true;
         saveTask(task);
 
-        // 顯示全螢幕 UI
         const overlay = document.getElementById('notificationOverlay');
         document.getElementById('notifTime').innerText = task.time;
         document.getElementById('notifTitle').innerText = task.title;
@@ -895,7 +879,6 @@
         document.getElementById('notificationOverlay').style.display = 'none';
     }
 
-    // 每 10 秒檢查一次時間
     setInterval(checkNotifications, 10000);
 
     // ==========================================
@@ -905,7 +888,7 @@
         initTheme();
         initSelectors();
         initDate();
-        initFirebase(); // 開始連接資料庫
+        initFirebase(); 
     }
 </script>
 
