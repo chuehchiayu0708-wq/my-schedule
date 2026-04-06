@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>我的行程管理 </title>
+    <title>我的行程管理</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         /* 定義亮色與深色模式的顏色變數 */
@@ -45,7 +45,7 @@
             color: var(--text-main);
             display: flex;
             justify-content: center;
-            align-items: center;
+            align-items: flex-start; /* 讓內容在手機上不會一直置中，改靠上對齊 */
             min-height: 100vh;
             padding: 20px;
             transition: background-color 0.3s, color 0.3s;
@@ -60,6 +60,7 @@
             overflow: hidden;
             transition: background-color 0.3s;
             position: relative;
+            margin-top: 10px; /* 留一點頂部空間 */
         }
 
         .header {
@@ -124,6 +125,7 @@
             gap: 5px;
             color: white;
             font-size: 16px;
+            flex-wrap: wrap; /* 避免手機螢幕太小破版 */
         }
 
         .date-select {
@@ -148,6 +150,9 @@
             color: var(--text-main);
         }
 
+        /* ==================== 
+           全新優化的輸入區塊 
+           ==================== */
         .input-section {
             padding: 20px;
             background-color: var(--surface);
@@ -157,25 +162,19 @@
 
         .input-group {
             display: flex;
-            gap: 10px;
+            flex-direction: column; /* 改為垂直排列 */
+            gap: 12px;
         }
 
-        input {
-            padding: 12px 15px;
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            font-size: 14px;
-            outline: none;
-            background-color: var(--input-bg);
-            color: var(--text-main);
-            transition: border-color 0.2s, background-color 0.3s, color 0.3s;
+        /* 時間選擇區塊 */
+        .time-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 500;
+            color: var(--text-muted);
         }
 
-        input:focus {
-            border-color: var(--primary);
-        }
-
-        /* 時間選擇器下拉選單樣式 */
         .time-selectors {
             display: flex;
             align-items: center;
@@ -183,10 +182,10 @@
         }
 
         .time-select {
-            padding: 12px 5px;
+            padding: 10px;
             border: 1px solid var(--border);
             border-radius: 10px;
-            font-size: 14px;
+            font-size: 15px;
             outline: none;
             background-color: var(--input-bg);
             color: var(--text-main);
@@ -198,18 +197,38 @@
             border-color: var(--primary);
         }
 
+        /* 輸入框 */
         input[type="text"] {
-            flex-grow: 1;
+            width: 100%;
+            padding: 14px 15px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            font-size: 15px;
+            outline: none;
+            background-color: var(--input-bg);
+            color: var(--text-main);
+            transition: border-color 0.2s, background-color 0.3s, color 0.3s;
         }
 
+        input:focus {
+            border-color: var(--primary);
+        }
+
+        /* 大按鈕設計 */
         button.add-btn {
+            width: 100%;
             background-color: var(--primary);
             color: white;
             border: none;
             border-radius: 10px;
-            padding: 0 20px;
+            padding: 14px 20px;
             cursor: pointer;
             font-weight: 600;
+            font-size: 16px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
             transition: background-color 0.2s, transform 0.1s;
         }
 
@@ -218,16 +237,17 @@
         }
 
         button.add-btn:active {
-            transform: scale(0.95);
+            transform: scale(0.98);
         }
 
         .error-msg {
             color: var(--danger);
-            font-size: 12px;
+            font-size: 13px;
             margin-top: 8px;
             display: none;
         }
 
+        /* 行程列表區塊 */
         .schedule-section {
             padding: 20px;
             max-height: 400px;
@@ -478,18 +498,25 @@
         </div>
     </div>
 
+    <!-- 優化後的手機版友善輸入區塊 -->
     <div class="input-section">
         <div class="input-group">
-            <!-- 下拉式 24小時制 時間選擇器 -->
-            <div class="time-selectors">
-                <select id="hourSelect" class="time-select"></select>
-                <span>:</span>
-                <select id="minuteSelect" class="time-select"></select>
+            <div class="time-wrapper">
+                <i class="fa-regular fa-clock"></i> 提醒時間：
+                <div class="time-selectors">
+                    <select id="hourSelect" class="time-select"></select>
+                    <span>:</span>
+                    <select id="minuteSelect" class="time-select"></select>
+                </div>
             </div>
-            <input type="text" id="taskInput" placeholder="準備做什麼呢？" required onkeypress="handleKeyPress(event)">
-            <button class="add-btn" onclick="addTask()"><i class="fa-solid fa-plus"></i></button>
+            
+            <input type="text" id="taskInput" placeholder="準備做什麼呢？ (按下 Enter 也能新增)" required onkeypress="handleKeyPress(event)">
+            
+            <button class="add-btn" onclick="addTask()">
+                <i class="fa-solid fa-plus"></i> 新增行程
+            </button>
         </div>
-        <div id="errorMsg" class="error-msg"><i class="fa-solid fa-circle-exclamation"></i> 請填寫完整的時間與行程內容！</div>
+        <div id="errorMsg" class="error-msg"><i class="fa-solid fa-circle-exclamation"></i> 請填寫完整的行程內容！</div>
     </div>
 
     <div class="schedule-section">
@@ -499,9 +526,7 @@
     </div>
 </div>
 
-<!-- =========================================
-     全螢幕通知覆蓋層 (預設隱藏)
-     ========================================= -->
+<!-- 全螢幕通知覆蓋層 -->
 <div class="notification-overlay" id="notificationOverlay">
     <div class="notification-card">
         <i class="fa-regular fa-bell notif-icon"></i>
@@ -515,20 +540,15 @@
      Firebase 與 應用程式邏輯模組
      ========================================= -->
 <script type="module">
-    // 引入 Firebase 雲端資料庫 SDK
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
     import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-    // 全域變數
     let allTasks = {};
     let currentDate = '';
     let db, auth, appId;
     let isCloudSyncActive = false;
 
-    // ==========================================
-    // 1. 初始化環境與 Firebase 連線
-    // ==========================================
     async function initFirebase() {
         const syncStatusEl = document.getElementById('syncStatus');
         
@@ -549,7 +569,6 @@
             
             appId = "my-shcedule";
 
-            // 依然需要匿名登入才能獲得讀寫權限
             await signInAnonymously(auth);
 
             onAuthStateChanged(auth, (user) => {
@@ -557,7 +576,7 @@
                     isCloudSyncActive = true;
                     syncStatusEl.innerHTML = '<i class="fa-solid fa-cloud"></i> 跨裝置已同步';
                     syncStatusEl.classList.add('connected');
-                    listenToCloudTasks(); // 啟動雲端即時監聽
+                    listenToCloudTasks(); 
                 }
             });
         } catch (error) {
@@ -570,11 +589,7 @@
         }
     }
 
-    // ==========================================
-    // 2. 雲端資料同步邏輯 (公開大廳版)
-    // ==========================================
     function listenToCloudTasks() {
-        // ★ 核心修改：移除 userId，改存放到大家都看得到的 'public' 和 'data' 目錄下
         const tasksRef = collection(db, 'artifacts', appId, 'public', 'data', 'tasks');
         
         onSnapshot(tasksRef, (snapshot) => {
@@ -600,7 +615,6 @@
 
     async function saveTask(task) {
         if (isCloudSyncActive) {
-            // ★ 對應修改：寫入路徑也改到公開位置
             const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'tasks', task.id.toString());
             await setDoc(docRef, task);
         } else {
@@ -619,7 +633,6 @@
 
     async function removeTask(task) {
         if (isCloudSyncActive) {
-            // ★ 對應修改：刪除路徑也改到公開位置
             const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'tasks', task.id.toString());
             await deleteDoc(docRef);
         } else {
@@ -637,9 +650,6 @@
         if (saved) allTasks = JSON.parse(saved);
     }
 
-    // ==========================================
-    // 3. UI 與功能邏輯
-    // ==========================================
     function initTheme() {
         const savedTheme = localStorage.getItem('myScheduleTheme');
         const html = document.documentElement;
@@ -842,9 +852,6 @@
         });
     }
 
-    // ==========================================
-    // 4. 全螢幕通知計時器核心
-    // ==========================================
     function checkNotifications() {
         const now = new Date();
         const yyyy = now.getFullYear();
@@ -881,9 +888,6 @@
 
     setInterval(checkNotifications, 10000);
 
-    // ==========================================
-    // 5. 啟動應用程式
-    // ==========================================
     window.onload = function() {
         initTheme();
         initSelectors();
