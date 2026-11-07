@@ -1,900 +1,414 @@
-<!DOCTYPE html>
-<html lang="zh-TW" data-theme="light">
+<!doctype html>
+<html lang="zh-Hant">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>我的行程管理</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        /* 定義亮色與深色模式的顏色變數 */
-        :root {
-            --primary: #4f46e5;
-            --primary-hover: #4338ca;
-            --bg: #f3f4f6;
-            --surface: #ffffff;
-            --text-main: #1f2937;
-            --text-muted: #6b7280;
-            --danger: #ef4444;
-            --border: #e5e7eb;
-            --input-bg: #ffffff;
-            --header-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        }
-
-        [data-theme="dark"] {
-            --primary: #6366f1;
-            --primary-hover: #818cf8;
-            --bg: #111827;
-            --surface: #1f2937;
-            --text-main: #f9fafb;
-            --text-muted: #9ca3af;
-            --danger: #f87171;
-            --border: #374151;
-            --input-bg: #374151;
-            --header-gradient: linear-gradient(135deg, #312e81 0%, #1e1b4b 100%);
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            background-color: var(--bg);
-            color: var(--text-main);
-            display: flex;
-            justify-content: center;
-            align-items: flex-start; /* 讓內容在手機上不會一直置中，改靠上對齊 */
-            min-height: 100vh;
-            padding: 20px;
-            transition: background-color 0.3s, color 0.3s;
-        }
-
-        .app-container {
-            background-color: var(--surface);
-            width: 100%;
-            max-width: 480px;
-            border-radius: 20px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-            transition: background-color 0.3s;
-            position: relative;
-            margin-top: 10px; /* 留一點頂部空間 */
-        }
-
-        .header {
-            background: var(--header-gradient);
-            color: white;
-            padding: 30px 20px 20px 20px;
-            text-align: center;
-            position: relative;
-            transition: background 0.3s;
-        }
-
-        /* 雲端連線狀態指示 */
-        .sync-status {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            font-size: 12px;
-            background: rgba(0, 0, 0, 0.2);
-            padding: 5px 10px;
-            border-radius: 20px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-        .sync-status i { color: #facc15; }
-        .sync-status.connected i { color: #4ade80; }
-
-        /* 深色模式切換按鈕 */
-        .theme-toggle {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: rgba(255,255,255,0.2);
-            border: none;
-            color: white;
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            cursor: pointer;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            transition: background 0.2s;
-        }
-
-        .theme-toggle:hover {
-            background: rgba(255,255,255,0.3);
-        }
-
-        .header h1 {
-            font-size: 24px;
-            font-weight: 600;
-            margin-bottom: 12px;
-            margin-top: 15px;
-        }
-
-        /* 日期選擇器下拉選單樣式 */
-        .date-selectors {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 5px;
-            color: white;
-            font-size: 16px;
-            flex-wrap: wrap; /* 避免手機螢幕太小破版 */
-        }
-
-        .date-select {
-            background: rgba(255, 255, 255, 0.2);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            color: white;
-            padding: 6px 10px;
-            border-radius: 8px;
-            font-size: 15px;
-            outline: none;
-            cursor: pointer;
-            font-family: inherit;
-            transition: background 0.2s;
-        }
-        
-        .date-select:hover {
-            background: rgba(255, 255, 255, 0.3);
-        }
-
-        .date-select option {
-            background-color: var(--surface);
-            color: var(--text-main);
-        }
-
-        /* ==================== 
-           全新優化的輸入區塊 
-           ==================== */
-        .input-section {
-            padding: 20px;
-            background-color: var(--surface);
-            border-bottom: 1px solid var(--border);
-            transition: background-color 0.3s, border-color 0.3s;
-        }
-
-        .input-group {
-            display: flex;
-            flex-direction: column; /* 改為垂直排列 */
-            gap: 12px;
-        }
-
-        /* 時間選擇區塊 */
-        .time-wrapper {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-weight: 500;
-            color: var(--text-muted);
-        }
-
-        .time-selectors {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .time-select {
-            padding: 10px;
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            font-size: 15px;
-            outline: none;
-            background-color: var(--input-bg);
-            color: var(--text-main);
-            transition: border-color 0.2s, background-color 0.3s, color 0.3s;
-            cursor: pointer;
-        }
-
-        .time-select:focus {
-            border-color: var(--primary);
-        }
-
-        /* 輸入框 */
-        input[type="text"] {
-            width: 100%;
-            padding: 14px 15px;
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            font-size: 15px;
-            outline: none;
-            background-color: var(--input-bg);
-            color: var(--text-main);
-            transition: border-color 0.2s, background-color 0.3s, color 0.3s;
-        }
-
-        input:focus {
-            border-color: var(--primary);
-        }
-
-        /* 大按鈕設計 */
-        button.add-btn {
-            width: 100%;
-            background-color: var(--primary);
-            color: white;
-            border: none;
-            border-radius: 10px;
-            padding: 14px 20px;
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 16px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 8px;
-            transition: background-color 0.2s, transform 0.1s;
-        }
-
-        button.add-btn:hover {
-            background-color: var(--primary-hover);
-        }
-
-        button.add-btn:active {
-            transform: scale(0.98);
-        }
-
-        .error-msg {
-            color: var(--danger);
-            font-size: 13px;
-            margin-top: 8px;
-            display: none;
-        }
-
-        /* 行程列表區塊 */
-        .schedule-section {
-            padding: 20px;
-            max-height: 400px;
-            overflow-y: auto;
-        }
-
-        .timeline {
-            list-style: none;
-            position: relative;
-        }
-
-        .timeline::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            bottom: 0;
-            left: 20px;
-            width: 2px;
-            background-color: var(--border);
-            transition: background-color 0.3s;
-        }
-
-        .task-item {
-            display: flex;
-            align-items: flex-start;
-            margin-bottom: 20px;
-            position: relative;
-            animation: slideIn 0.3s ease-out;
-        }
-
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .task-dot {
-            width: 14px;
-            height: 14px;
-            background-color: var(--primary);
-            border-radius: 50%;
-            border: 3px solid var(--surface);
-            box-shadow: 0 0 0 1px var(--primary);
-            position: absolute;
-            left: 14px;
-            top: 5px;
-            z-index: 1;
-            transition: border-color 0.3s;
-        }
-
-        .task-content {
-            margin-left: 45px;
-            background-color: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 15px;
-            width: 100%;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.02);
-            transition: background-color 0.3s, border-color 0.3s;
-        }
-
-        .task-info {
-            display: flex;
-            flex-direction: column;
-            flex-grow: 1;
-            padding-right: 15px;
-        }
-
-        .task-time {
-            font-size: 13px;
-            color: var(--primary);
-            margin-bottom: 4px;
-            font-weight: 700;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            transition: color 0.3s;
-        }
-
-        .task-title {
-            font-size: 15px;
-            font-weight: 500;
-            word-break: break-all;
-        }
-
-        .task-actions {
-            display: flex;
-            gap: 8px;
-        }
-
-        .action-btn {
-            background: none;
-            border: none;
-            color: var(--text-muted);
-            cursor: pointer;
-            font-size: 16px;
-            padding: 8px;
-            border-radius: 8px;
-            transition: all 0.2s;
-            opacity: 0.6;
-        }
-
-        .action-btn:hover {
-            background-color: var(--bg);
-            opacity: 1;
-        }
-
-        .check-btn:hover { color: #10b981; }
-        .edit-btn:hover { color: var(--primary); }
-        .delete-btn:hover { color: var(--danger); }
-
-        .task-completed .task-title {
-            text-decoration: line-through;
-            color: var(--text-muted);
-        }
-
-        .task-completed .task-dot {
-            background-color: #10b981;
-            box-shadow: 0 0 0 1px #10b981;
-        }
-
-        .task-completed .check-btn {
-            color: #10b981;
-            opacity: 1;
-        }
-
-        .empty-state {
-            text-align: center;
-            color: var(--text-muted);
-            padding: 30px 0;
-            font-size: 14px;
-            transition: color 0.3s;
-        }
-
-        /* 隱藏卷軸 */
-        .schedule-section::-webkit-scrollbar { width: 6px; }
-        .schedule-section::-webkit-scrollbar-thumb { background-color: var(--border); border-radius: 10px; }
-
-        /* =========================================
-           全螢幕通知 Modal 樣式
-           ========================================= */
-        .notification-overlay {
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background-color: rgba(0, 0, 0, 0.75);
-            backdrop-filter: blur(8px);
-            z-index: 9999;
-            display: none; 
-            justify-content: center;
-            align-items: center;
-            animation: fadeIn 0.3s;
-        }
-
-        .notification-card {
-            background-color: var(--surface);
-            padding: 40px;
-            border-radius: 24px;
-            text-align: center;
-            width: 90%;
-            max-width: 360px;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-            animation: popUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-
-        .notif-icon {
-            font-size: 70px;
-            color: var(--primary);
-            margin-bottom: 20px;
-            animation: ring 1.5s infinite;
-            transform-origin: top center;
-        }
-
-        .notif-time {
-            font-size: 20px;
-            color: var(--text-muted);
-            font-weight: 600;
-            margin-bottom: 10px;
-        }
-
-        .notif-title {
-            font-size: 24px;
-            color: var(--text-main);
-            font-weight: bold;
-            margin-bottom: 30px;
-            word-break: break-all;
-        }
-
-        .notif-btn {
-            background-color: var(--primary);
-            color: white;
-            border: none;
-            padding: 15px 30px;
-            border-radius: 12px;
-            font-size: 18px;
-            font-weight: bold;
-            cursor: pointer;
-            width: 100%;
-            transition: background 0.2s;
-        }
-
-        .notif-btn:hover {
-            background-color: var(--primary-hover);
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-
-        @keyframes popUp {
-            from { opacity: 0; transform: scale(0.8) translateY(20px); }
-            to { opacity: 1; transform: scale(1) translateY(0); }
-        }
-
-        @keyframes ring {
-            0% { transform: rotate(0); }
-            10% { transform: rotate(15deg); }
-            20% { transform: rotate(-10deg); }
-            30% { transform: rotate(5deg); }
-            40% { transform: rotate(-5deg); }
-            50% { transform: rotate(0); }
-            100% { transform: rotate(0); }
-        }
-    </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0f172a">
+<title>打卡</title>
+<style>
+:root{--bg:#0f172a;--card:#1e293b;--text:#f1f5f9;--sub:#94a3b8;--green:#22c55e;--red:#ef4444;--line:#334155}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Noto Sans TC","PingFang TC",sans-serif;padding:env(safe-area-inset-top) 16px 40px}
+.wrap{max-width:480px;margin:0 auto}
+header{display:flex;justify-content:space-between;align-items:center;padding:16px 0}
+header h1{font-size:20px;margin:0}
+.sub{color:var(--sub);font-size:13px}
+button{font:inherit;color:inherit;cursor:pointer}
+.link{background:none;border:0;color:var(--sub);font-size:13px;text-decoration:underline}
+.punch{text-align:center;padding:4px 0 24px}
+.chips{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:14px}
+.chip{display:flex;align-items:center;gap:6px;background:var(--card);border:2px solid transparent;border-radius:999px;padding:8px 14px;font-size:15px}
+.chip.sel{border-color:var(--c)}
+.chip.locked{opacity:.45}
+.chip.locked.sel{opacity:1}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--c);display:inline-block;flex:none}
+.status{font-size:15px;color:var(--sub);margin-bottom:6px;min-height:22px}
+.timer{font-size:44px;font-weight:700;font-variant-numeric:tabular-nums;margin-bottom:18px;min-height:54px}
+#btn{width:220px;height:220px;border-radius:50%;border:0;font-size:36px;font-weight:700;color:#fff;background:var(--green);box-shadow:0 10px 40px rgba(34,197,94,.35);transition:transform .1s,background .2s}
+#btn.out{background:var(--red);box-shadow:0 10px 40px rgba(239,68,68,.35)}
+#btn:active{transform:scale(.95)}
+#btn:disabled{opacity:.4}
+.card{background:var(--card);border-radius:16px;padding:16px;margin-bottom:14px}
+.month-nav{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.month-nav button{background:var(--bg);border:0;width:36px;height:36px;border-radius:10px;font-size:18px}
+.month-nav b{font-size:17px}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.stat{background:var(--bg);border-radius:12px;padding:12px}
+.stat .n{font-size:22px;font-weight:700;margin-top:4px}
+.stat.wide{grid-column:span 2}
+.stat.wide .n{font-size:30px;color:var(--green)}
+.brk{margin-top:12px}
+.brk-row{display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--line);font-size:15px}
+.brk-row .nm{flex:1}
+.brk-row .hr{color:var(--sub);font-size:13px}
+.brk-row .pay{font-weight:600;min-width:72px;text-align:right}
+.card-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+h2{font-size:15px;margin:0;color:var(--sub);font-weight:600}
+.add{background:var(--bg);border:0;border-radius:10px;padding:6px 12px;font-size:13px;color:var(--text)}
+.job{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+.job:first-of-type{border-top:0}
+.job .nm{flex:1}
+.job .w{color:var(--sub);font-size:13px}
+.rec{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+.rec:first-of-type{border-top:0}
+.rec .d{font-size:15px;display:flex;align-items:center;gap:6px}
+.rec .t{font-size:12px;color:var(--sub);margin-top:2px}
+.rec .h{font-weight:600;margin-right:6px;text-align:right}
+.x{background:none;border:0;color:var(--sub);font-size:17px;padding:4px 8px}
+.empty{color:var(--sub);text-align:center;padding:16px 0;font-size:14px}
+#login{text-align:center;padding:80px 0}
+#login button{background:#fff;color:#111;border:0;border-radius:12px;padding:14px 24px;font-size:16px;font-weight:600}
+.badge{font-size:12px;background:var(--card);border-radius:8px;padding:4px 8px;color:var(--sub)}
+.hidden{display:none}
+dialog{background:var(--card);color:var(--text);border:0;border-radius:16px;padding:20px;width:min(340px,90vw)}
+dialog::backdrop{background:rgba(0,0,0,.6)}
+dialog h3{margin:0 0 14px;font-size:17px}
+dialog label{display:block;font-size:13px;color:var(--sub);margin:10px 0 4px}
+dialog input,dialog select{width:100%;min-height:42px;background:var(--bg);border:1px solid var(--line);color:var(--text);border-radius:10px;padding:10px;font-size:16px}
+.colors{display:flex;gap:10px;margin-top:4px}
+.colors i{width:28px;height:28px;border-radius:50%;border:3px solid transparent;background:var(--c);cursor:pointer}
+.colors i.sel{border-color:#fff}
+.dlg-btns{display:flex;gap:8px;margin-top:18px}
+.dlg-btns button{flex:1;border:0;border-radius:10px;padding:11px;font-size:15px;background:var(--bg)}
+.dlg-btns .ok{background:var(--green);color:#fff;font-weight:600}
+.dlg-btns .del{background:none;color:var(--red);flex:none;padding:11px 8px}
+</style>
 </head>
 <body>
+<div class="wrap">
+  <header>
+    <h1>⏱ 打卡</h1>
+    <div><span id="mode" class="badge"></span> <button class="link hidden" id="logout">登出</button></div>
+  </header>
 
-<div class="app-container">
-    <div class="header">
-        <!-- 雲端連線狀態 -->
-        <div id="syncStatus" class="sync-status">
-            <i class="fa-solid fa-cloud"></i> 載入中...
-        </div>
+  <div id="login" class="hidden">
+    <p class="sub" style="margin-bottom:20px">登入後，手機與電腦的打卡紀錄會自動同步</p>
+    <button id="loginBtn">使用 Google 登入</button>
+  </div>
 
-        <!-- 深色模式切換按鈕 -->
-        <button class="theme-toggle" id="themeToggleBtn" onclick="toggleTheme()" title="切換深色模式">
-            <i class="fa-solid fa-moon"></i>
-        </button>
-        <h1 id="headerTitle"><i class="fa-solid fa-calendar-days"></i> 行程管理</h1>
-        
-        <!-- 下拉式日期選擇器 -->
-        <div class="date-selectors">
-            <select id="yearSelect" class="date-select" onchange="handleYearMonthChange()"></select> 年
-            <select id="monthSelect" class="date-select" onchange="handleYearMonthChange()"></select> 月
-            <select id="daySelect" class="date-select" onchange="changeDate()"></select> 日
-        </div>
-    </div>
+  <div id="app" class="hidden">
+    <section class="punch">
+      <div class="chips" id="chips"></div>
+      <div class="status" id="status"></div>
+      <div class="timer" id="timer"></div>
+      <button id="btn">上班</button>
+      <div style="margin-top:14px"><button class="link" id="manual">忘記打卡？手動補登時間</button></div>
+    </section>
 
-    <!-- 優化後的手機版友善輸入區塊 -->
-    <div class="input-section">
-        <div class="input-group">
-            <div class="time-wrapper">
-                <i class="fa-regular fa-clock"></i> 提醒時間：
-                <div class="time-selectors">
-                    <select id="hourSelect" class="time-select"></select>
-                    <span>:</span>
-                    <select id="minuteSelect" class="time-select"></select>
-                </div>
-            </div>
-            
-            <input type="text" id="taskInput" placeholder="準備做什麼呢？ (按下 Enter 也能新增)" required onkeypress="handleKeyPress(event)">
-            
-            <button class="add-btn" onclick="addTask()">
-                <i class="fa-solid fa-plus"></i> 新增行程
-            </button>
-        </div>
-        <div id="errorMsg" class="error-msg"><i class="fa-solid fa-circle-exclamation"></i> 請填寫完整的行程內容！</div>
-    </div>
+    <section class="card">
+      <div class="month-nav">
+        <button id="prev">‹</button><b id="monthLabel"></b><button id="next">›</button>
+      </div>
+      <div class="stats">
+        <div class="stat"><div class="sub">本月工時</div><div class="n" id="mHours">0</div></div>
+        <div class="stat"><div class="sub">出勤天數</div><div class="n" id="mDays">0</div></div>
+        <div class="stat wide"><div class="sub">預估薪資（全部工作）</div><div class="n" id="mPay">NT$ 0</div></div>
+      </div>
+      <div class="brk" id="brk"></div>
+    </section>
 
-    <div class="schedule-section">
-        <ul class="timeline" id="scheduleList">
-            <!-- 行程會動態載入這裡 -->
-        </ul>
-    </div>
+    <section class="card">
+      <div class="card-h"><h2>我的工作</h2><button class="add" id="addJob">＋ 新增工作</button></div>
+      <div id="jobs"></div>
+    </section>
+
+    <section class="card">
+      <div class="card-h"><h2>打卡紀錄</h2><button class="add" id="addRec">＋ 補登紀錄</button></div>
+      <div id="list"></div>
+    </section>
+  </div>
 </div>
 
-<!-- 全螢幕通知覆蓋層 -->
-<div class="notification-overlay" id="notificationOverlay">
-    <div class="notification-card">
-        <i class="fa-regular fa-bell notif-icon"></i>
-        <div class="notif-time" id="notifTime">14:30</div>
-        <div class="notif-title" id="notifTitle">這是一個測試行程</div>
-        <button class="notif-btn" onclick="closeNotification()">我知道了！</button>
-    </div>
-</div>
+<dialog id="dlg">
+  <h3 id="dlgTitle">新增工作</h3>
+  <label>工作名稱</label>
+  <input id="jName" placeholder="例如：便利商店" maxlength="20">
+  <label>時薪 NT$</label>
+  <input id="jWage" type="number" inputmode="decimal" min="0" step="1" placeholder="例如 190">
+  <label>顏色</label>
+  <div class="colors" id="jColors"></div>
+  <div class="dlg-btns">
+    <button class="del hidden" id="jDel">刪除</button>
+    <button id="jCancel">取消</button>
+    <button class="ok" id="jSave">儲存</button>
+  </div>
+</dialog>
 
-<!-- =========================================
-     Firebase 與 應用程式邏輯模組
-     ========================================= -->
+<dialog id="recDlg">
+  <h3 id="recTitle">補登紀錄</h3>
+  <label>工作</label>
+  <select id="rJob"></select>
+  <label>開始時間</label>
+  <input id="rStart" type="datetime-local">
+  <label>結束時間（留空 = 還在上班中）</label>
+  <input id="rEnd" type="datetime-local">
+  <div class="dlg-btns">
+    <button id="rCancel">取消</button>
+    <button class="ok" id="rSave">儲存</button>
+  </div>
+</dialog>
+
 <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+// ====== 填入你的 Firebase 設定（Firebase 控制台 → 專案設定 → 你的應用程式）======
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT.firebaseapp.com",
+  projectId: "YOUR_PROJECT",
+  appId: "YOUR_APP_ID"
+};
+// =================================================================================
 
-    let allTasks = {};
-    let currentDate = '';
-    let db, auth, appId;
-    let isCloudSyncActive = false;
+const CLOUD = !String(firebaseConfig.apiKey).startsWith("YOUR_");
+const $ = id => document.getElementById(id);
+const PALETTE = ["#22c55e", "#3b82f6", "#f59e0b", "#ec4899", "#a855f7", "#14b8a6"];
+let records = [], jobs = [], busy = false;
+let selJob = localStorage.getItem("pc_lastJob") || "";
+let view = new Date(); view.setDate(1);
 
-    async function initFirebase() {
-        const syncStatusEl = document.getElementById('syncStatus');
-        
-        try {
-            // 使用你的專屬密鑰
-            const firebaseConfig = {
-                apiKey: "AIzaSyDT_IND0lDbZiI0GI2i5AslTszNjXcDNKs",
-                authDomain: "my-shcedule.firebaseapp.com",
-                projectId: "my-shcedule",
-                storageBucket: "my-shcedule.firebasestorage.app",
-                messagingSenderId: "299079790493",
-                appId: "1:299079790493:web:0f136c2486f5c159138974"
-            };
-            
-            const app = initializeApp(firebaseConfig);
-            auth = getAuth(app);
-            db = getFirestore(app);
-            
-            appId = "my-shcedule";
-
-            await signInAnonymously(auth);
-
-            onAuthStateChanged(auth, (user) => {
-                if (user) {
-                    isCloudSyncActive = true;
-                    syncStatusEl.innerHTML = '<i class="fa-solid fa-cloud"></i> 跨裝置已同步';
-                    syncStatusEl.classList.add('connected');
-                    listenToCloudTasks(); 
-                }
-            });
-        } catch (error) {
-            console.error("Firebase 連線發生錯誤:", error);
-            isCloudSyncActive = false;
-            syncStatusEl.innerHTML = '<i class="fa-solid fa-laptop"></i> 單機模式';
-            syncStatusEl.classList.remove('connected');
-            loadLocalData();
-            renderTasks();
-        }
+// ---------- 儲存層 ----------
+let store;
+if (CLOUD) {
+  const V = "10.12.2";
+  const { initializeApp } = await import(`https://www.gstatic.com/firebasejs/${V}/firebase-app.js`);
+  const A = await import(`https://www.gstatic.com/firebasejs/${V}/firebase-auth.js`);
+  const F = await import(`https://www.gstatic.com/firebasejs/${V}/firebase-firestore.js`);
+  const app = initializeApp(firebaseConfig);
+  const auth = A.getAuth(app);
+  const db = F.getFirestore(app);
+  let uid = null, unsubs = [];
+  const col = n => F.collection(db, "users", uid, n);
+  store = {
+    init(onReady) {
+      $("loginBtn").onclick = () => A.signInWithPopup(auth, new A.GoogleAuthProvider()).catch(e => alert("登入失敗：" + e.message));
+      $("logout").onclick = () => A.signOut(auth);
+      A.onAuthStateChanged(auth, user => {
+        unsubs.forEach(u => u()); unsubs = [];
+        if (!user) { uid = null; records = []; jobs = []; $("login").classList.remove("hidden"); $("app").classList.add("hidden"); $("logout").classList.add("hidden"); return; }
+        uid = user.uid;
+        $("login").classList.add("hidden"); $("app").classList.remove("hidden"); $("logout").classList.remove("hidden");
+        unsubs.push(F.onSnapshot(F.query(col("records"), F.orderBy("start", "desc"), F.limit(1000)), snap => {
+          records = snap.docs.map(d => ({ id: d.id, ...d.data() })); onReady();
+        }));
+        unsubs.push(F.onSnapshot(col("jobs"), snap => {
+          jobs = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (a.order || 0) - (b.order || 0));
+          onReady();
+        }));
+      });
+    },
+    start: jobId => F.addDoc(col("records"), { start: Date.now(), end: null, jobId }),
+    end: id => F.updateDoc(F.doc(db, "users", uid, "records", id), { end: Date.now() }),
+    removeRecord: id => F.deleteDoc(F.doc(db, "users", uid, "records", id)),
+    addRecord: r => F.addDoc(col("records"), { start: r.start, end: r.end, jobId: r.jobId }),
+    updateRecord: (id, r) => F.updateDoc(F.doc(db, "users", uid, "records", id), { start: r.start, end: r.end, jobId: r.jobId }),
+    async saveJob(j) {
+      const data = { name: j.name, wage: j.wage, color: j.color };
+      if (j.id) return F.setDoc(F.doc(db, "users", uid, "jobs", j.id), data, { merge: true });
+      return F.addDoc(col("jobs"), { ...data, order: Date.now() });
+    },
+    async removeJob(id) {
+      const snap = await F.getDocs(F.query(col("records"), F.where("jobId", "==", id)));
+      for (let i = 0; i < snap.docs.length; i += 400) {
+        const b = F.writeBatch(db);
+        snap.docs.slice(i, i + 400).forEach(d => b.delete(d.ref));
+        await b.commit();
+      }
+      await F.deleteDoc(F.doc(db, "users", uid, "jobs", id));
     }
-
-    function listenToCloudTasks() {
-        const tasksRef = collection(db, 'artifacts', appId, 'public', 'data', 'tasks');
-        
-        onSnapshot(tasksRef, (snapshot) => {
-            allTasks = {}; 
-            
-            snapshot.forEach(docSnap => {
-                const task = docSnap.data();
-                if (!allTasks[task.date]) {
-                    allTasks[task.date] = [];
-                }
-                allTasks[task.date].push(task);
-            });
-
-            Object.keys(allTasks).forEach(date => {
-                allTasks[date].sort((a, b) => a.time.localeCompare(b.time));
-            });
-
-            renderTasks();
-        }, (error) => {
-            console.error("雲端同步發生錯誤:", error);
-        });
+  };
+} else {
+  const load = k => { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } };
+  const saveR = () => localStorage.setItem("pc_records", JSON.stringify(records));
+  const saveJ = () => localStorage.setItem("pc_jobs", JSON.stringify(jobs));
+  store = {
+    init(onReady) {
+      records = load("pc_records") || [];
+      jobs = load("pc_jobs") || [];
+      $("app").classList.remove("hidden");
+      onReady();
+    },
+    async start(jobId) { records.unshift({ id: String(Date.now()), start: Date.now(), end: null, jobId }); saveR(); render(); },
+    async end(id) { records.find(r => r.id === id).end = Date.now(); saveR(); render(); },
+    async removeRecord(id) { records = records.filter(r => r.id !== id); saveR(); render(); },
+    async addRecord(r) { records.push({ id: String(Date.now()), start: r.start, end: r.end, jobId: r.jobId }); records.sort((a, b) => b.start - a.start); saveR(); render(); },
+    async updateRecord(id, r) { Object.assign(records.find(x => x.id === id), { start: r.start, end: r.end, jobId: r.jobId }); records.sort((a, b) => b.start - a.start); saveR(); render(); },
+    async saveJob(j) {
+      if (j.id) Object.assign(jobs.find(x => x.id === j.id), { name: j.name, wage: j.wage, color: j.color });
+      else jobs.push({ id: String(Date.now()), name: j.name, wage: j.wage, color: j.color });
+      saveJ(); render();
+    },
+    async removeJob(id) {
+      jobs = jobs.filter(j => j.id !== id); records = records.filter(r => r.jobId !== id);
+      saveJ(); saveR(); render();
     }
+  };
+}
+$("mode").textContent = CLOUD ? "☁️ 雲端同步" : "💾 本機模式";
 
-    async function saveTask(task) {
-        if (isCloudSyncActive) {
-            const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'tasks', task.id.toString());
-            await setDoc(docRef, task);
-        } else {
-            if (!allTasks[task.date]) allTasks[task.date] = [];
-            const index = allTasks[task.date].findIndex(t => t.id === task.id);
-            if(index !== -1) {
-                allTasks[task.date][index] = task;
-            } else {
-                allTasks[task.date].push(task);
-            }
-            allTasks[task.date].sort((a, b) => a.time.localeCompare(b.time));
-            localStorage.setItem('myScheduleAllTasks', JSON.stringify(allTasks));
-            renderTasks();
-        }
-    }
+// ---------- 工具 ----------
+const pad = n => String(n).padStart(2, "0");
+const fmtClock = ms => { const s = Math.floor(ms / 1000); return `${pad(Math.floor(s / 3600))}:${pad(Math.floor(s % 3600 / 60))}:${pad(s % 60)}`; };
+const fmtHM = ms => { const m = Math.round(ms / 60000); return m >= 60 ? `${Math.floor(m / 60)} 小時 ${m % 60} 分` : `${m} 分`; };
+const fmtTime = ms => { const d = new Date(ms); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+const money = n => "NT$ " + Math.round(n).toLocaleString();
+const dur = r => (r.end || Date.now()) - r.start;
+const inView = r => { const d = new Date(r.start); return d.getFullYear() === view.getFullYear() && d.getMonth() === view.getMonth(); };
+const jobOf = r => jobs.find(j => j.id === r.jobId) || jobs[0];
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const WD = "日一二三四五六";
+const currentJob = () => jobs.find(j => j.id === selJob) || jobs[0];
 
-    async function removeTask(task) {
-        if (isCloudSyncActive) {
-            const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'tasks', task.id.toString());
-            await deleteDoc(docRef);
-        } else {
-            if (allTasks[task.date]) {
-                allTasks[task.date] = allTasks[task.date].filter(t => t.id !== task.id);
-                if (allTasks[task.date].length === 0) delete allTasks[task.date];
-                localStorage.setItem('myScheduleAllTasks', JSON.stringify(allTasks));
-                renderTasks();
-            }
-        }
-    }
+// ---------- 畫面 ----------
+function renderPunch() {
+  const open = records.find(r => !r.end);
+  const btn = $("btn");
+  if (!jobs.length) {
+    $("chips").innerHTML = "";
+    $("status").textContent = "請先在下方新增一份工作";
+    btn.textContent = "上班"; btn.className = ""; btn.disabled = true;
+    return;
+  }
+  const active = open ? jobOf(open) : currentJob();
+  $("chips").innerHTML = jobs.map(j =>
+    `<button class="chip${j.id === active.id ? " sel" : ""}${open ? " locked" : ""}" style="--c:${j.color}" data-job="${j.id}"><span class="dot" style="--c:${j.color}"></span>${esc(j.name)}</button>`
+  ).join("");
+  btn.textContent = open ? "下班" : "上班";
+  btn.className = open ? "out" : "";
+  btn.disabled = busy;
+  $("status").textContent = open ? `${active.name}・${fmtTime(open.start)} 開始` : `選擇工作後按「上班」`;
+  tick();
+}
+function renderStats() {
+  $("monthLabel").textContent = `${view.getFullYear()} 年 ${view.getMonth() + 1} 月`;
+  const mine = records.filter(inView);
+  const by = new Map();
+  let total = 0, pay = 0;
+  mine.forEach(r => {
+    const j = jobOf(r); if (!j) return;
+    const ms = dur(r), p = ms / 3600000 * (j.wage || 0);
+    const e = by.get(j.id) || { j, ms: 0, pay: 0 };
+    e.ms += ms; e.pay += p; by.set(j.id, e);
+    total += ms; pay += p;
+  });
+  const days = new Set(mine.map(r => new Date(r.start).toDateString())).size;
+  $("mHours").textContent = fmtHM(total);
+  $("mDays").textContent = `${days} 天`;
+  $("mPay").textContent = money(pay);
+  $("brk").innerHTML = [...by.values()].map(e =>
+    `<div class="brk-row"><span class="dot" style="--c:${e.j.color}"></span><span class="nm">${esc(e.j.name)}</span><span class="hr">${fmtHM(e.ms)}</span><span class="pay">${money(e.pay)}</span></div>`
+  ).join("");
+}
+function renderJobs() {
+  $("jobs").innerHTML = jobs.length ? jobs.map(j =>
+    `<div class="job"><span class="dot" style="--c:${j.color}"></span><span class="nm">${esc(j.name)}</span><span class="w">時薪 ${money(j.wage || 0)}</span><button class="x" data-edit="${j.id}" aria-label="編輯">✏️</button></div>`
+  ).join("") : `<div class="empty">還沒有工作，先新增一份吧</div>`;
+}
+function renderList() {
+  const mine = records.filter(inView);
+  $("list").innerHTML = mine.length ? mine.map(r => {
+    const d = new Date(r.start), j = jobOf(r);
+    return `<div class="rec"><div><div class="d"><span class="dot" style="--c:${j ? j.color : "#64748b"}"></span>${d.getMonth() + 1}/${d.getDate()}（${WD[d.getDay()]}）${j ? esc(j.name) : ""}</div>
+      <div class="t">${fmtTime(r.start)} – ${r.end ? fmtTime(r.end) : "進行中"}</div></div>
+      <div style="display:flex;align-items:center"><span class="h">${fmtHM(dur(r))}</span>
+      <button class="x" data-edit-rec="${r.id}" aria-label="修改時間">✏️</button>
+      <button class="x" data-del="${r.id}" aria-label="刪除">🗑</button></div></div>`;
+  }).join("") : `<div class="empty">這個月還沒有紀錄</div>`;
+}
+function render() { renderPunch(); renderStats(); renderJobs(); renderList(); }
+function tick() {
+  const open = records.find(r => !r.end);
+  $("timer").textContent = open ? fmtClock(Date.now() - open.start) : "";
+}
 
-    function loadLocalData() {
-        const saved = localStorage.getItem('myScheduleAllTasks');
-        if (saved) allTasks = JSON.parse(saved);
-    }
+// ---------- 事件 ----------
+$("chips").onclick = e => {
+  const b = e.target.closest("[data-job]");
+  if (!b || records.some(r => !r.end)) return;
+  selJob = b.dataset.job; localStorage.setItem("pc_lastJob", selJob); renderPunch();
+};
+$("btn").onclick = async () => {
+  if (busy) return; busy = true; renderPunch();
+  try {
+    const open = records.find(r => !r.end);
+    if (open) await store.end(open.id); else await store.start(currentJob().id);
+    if (navigator.vibrate) navigator.vibrate(60);
+  } catch (e) { alert("打卡失敗：" + e.message); }
+  busy = false; render();
+};
+$("list").onclick = async e => {
+  const id = e.target.dataset.del;
+  if (id && confirm("確定刪除這筆紀錄？")) await store.removeRecord(id);
+  const eid = e.target.dataset.editRec;
+  if (eid) openRec(records.find(r => r.id === eid));
+};
 
-    function initTheme() {
-        const savedTheme = localStorage.getItem('myScheduleTheme');
-        const html = document.documentElement;
-        const toggleIcon = document.querySelector('#themeToggleBtn i');
-        
-        if (savedTheme === 'dark') {
-            html.setAttribute('data-theme', 'dark');
-            toggleIcon.className = 'fa-solid fa-sun';
-        } else {
-            html.setAttribute('data-theme', 'light');
-            toggleIcon.className = 'fa-solid fa-moon';
-        }
-    }
+// ---- 補登 / 修改紀錄視窗 ----
+let editingRec = null;
+const toInput = ms => { const d = new Date(ms); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+function openRec(rec) {
+  if (!jobs.length) return alert("請先新增一份工作");
+  editingRec = rec || null;
+  $("recTitle").textContent = rec ? "修改紀錄" : "補登紀錄";
+  $("rJob").innerHTML = jobs.map(j => `<option value="${j.id}">${esc(j.name)}</option>`).join("");
+  const j = rec ? jobOf(rec) : currentJob();
+  $("rJob").value = j.id;
+  $("rStart").value = toInput(rec ? rec.start : Date.now());
+  $("rEnd").value = rec ? (rec.end ? toInput(rec.end) : "") : toInput(Date.now());
+  $("recDlg").showModal();
+}
+$("manual").onclick = () => openRec(null);
+$("addRec").onclick = () => openRec(null);
+$("rCancel").onclick = () => $("recDlg").close();
+$("rSave").onclick = async () => {
+  const start = new Date($("rStart").value).getTime();
+  const end = $("rEnd").value ? new Date($("rEnd").value).getTime() : null;
+  if (!start) return alert("請選擇開始時間");
+  if (start > Date.now() + 60000) return alert("開始時間不能是未來");
+  if (end && end <= start) return alert("結束時間要晚於開始時間");
+  if (!end && records.some(r => !r.end && (!editingRec || r.id !== editingRec.id))) return alert("目前已有一筆上班中的紀錄，請先下班，或填入結束時間");
+  const data = { start, end, jobId: $("rJob").value };
+  try {
+    if (editingRec) await store.updateRecord(editingRec.id, data); else await store.addRecord(data);
+    if (!end) { selJob = data.jobId; localStorage.setItem("pc_lastJob", selJob); }
+    $("recDlg").close();
+  } catch (e) { alert("儲存失敗：" + e.message); }
+};
+$("prev").onclick = () => { view.setMonth(view.getMonth() - 1); renderStats(); renderList(); };
+$("next").onclick = () => { view.setMonth(view.getMonth() + 1); renderStats(); renderList(); };
 
-    window.toggleTheme = function() {
-        const html = document.documentElement;
-        const toggleIcon = document.querySelector('#themeToggleBtn i');
-        if (html.getAttribute('data-theme') === 'light') {
-            html.setAttribute('data-theme', 'dark');
-            localStorage.setItem('myScheduleTheme', 'dark');
-            toggleIcon.className = 'fa-solid fa-sun';
-        } else {
-            html.setAttribute('data-theme', 'light');
-            localStorage.setItem('myScheduleTheme', 'light');
-            toggleIcon.className = 'fa-solid fa-moon';
-        }
-    }
+// ---- 工作編輯視窗 ----
+let editing = null, pickedColor = PALETTE[0];
+function drawColors() {
+  $("jColors").innerHTML = PALETTE.map(c => `<i style="--c:${c}" data-c="${c}" class="${c === pickedColor ? "sel" : ""}"></i>`).join("");
+}
+function openDlg(job) {
+  editing = job || null;
+  $("dlgTitle").textContent = job ? "編輯工作" : "新增工作";
+  $("jName").value = job ? job.name : "";
+  $("jWage").value = job ? job.wage : "";
+  pickedColor = job ? job.color : PALETTE[jobs.length % PALETTE.length];
+  $("jDel").classList.toggle("hidden", !job);
+  drawColors(); $("dlg").showModal();
+}
+$("addJob").onclick = () => openDlg(null);
+$("jobs").onclick = e => { const id = e.target.dataset.edit; if (id) openDlg(jobs.find(j => j.id === id)); };
+$("jColors").onclick = e => { if (e.target.dataset.c) { pickedColor = e.target.dataset.c; drawColors(); } };
+$("jCancel").onclick = () => $("dlg").close();
+$("jSave").onclick = async () => {
+  const name = $("jName").value.trim();
+  const wage = parseFloat($("jWage").value);
+  if (!name) return alert("請輸入工作名稱");
+  if (!(wage >= 0)) return alert("請輸入時薪");
+  try { await store.saveJob({ id: editing && editing.id, name, wage, color: pickedColor }); $("dlg").close(); }
+  catch (e) { alert("儲存失敗：" + e.message); }
+};
+$("jDel").onclick = async () => {
+  const n = records.filter(r => r.jobId === editing.id).length;
+  if (!confirm(`刪除「${editing.name}」？${n ? `\n這份工作的 ${n} 筆打卡紀錄也會一併刪除，無法復原。` : ""}`)) return;
+  try { await store.removeJob(editing.id); $("dlg").close(); } catch (e) { alert("刪除失敗：" + e.message); }
+};
 
-    function initSelectors() {
-        const hourSelect = document.getElementById('hourSelect');
-        for(let i = 0; i < 24; i++) {
-            const val = i.toString().padStart(2, '0');
-            hourSelect.add(new Option(val, val));
-        }
-
-        const minuteSelect = document.getElementById('minuteSelect');
-        for(let i = 0; i < 60; i += 5) {
-            const val = i.toString().padStart(2, '0');
-            minuteSelect.add(new Option(val, val));
-        }
-
-        const yearSelect = document.getElementById('yearSelect');
-        const currentYear = new Date().getFullYear();
-        for(let i = currentYear - 1; i <= currentYear + 3; i++) {
-            yearSelect.add(new Option(i, i));
-        }
-
-        const monthSelect = document.getElementById('monthSelect');
-        for(let i = 1; i <= 12; i++) {
-            const val = i.toString().padStart(2, '0');
-            monthSelect.add(new Option(val, val));
-        }
-    }
-
-    function updateDays() {
-        const year = parseInt(document.getElementById('yearSelect').value);
-        const month = parseInt(document.getElementById('monthSelect').value);
-        const daySelect = document.getElementById('daySelect');
-        const currentSelectedDay = daySelect.value;
-        
-        daySelect.innerHTML = ''; 
-        const daysInMonth = new Date(year, month, 0).getDate(); 
-        
-        for(let i = 1; i <= daysInMonth; i++) {
-            const val = i.toString().padStart(2, '0');
-            daySelect.add(new Option(val, val));
-        }
-
-        if(currentSelectedDay && parseInt(currentSelectedDay) <= daysInMonth) {
-            daySelect.value = currentSelectedDay;
-        }
-    }
-
-    function initDate() {
-        const today = new Date();
-        document.getElementById('yearSelect').value = today.getFullYear();
-        document.getElementById('monthSelect').value = String(today.getMonth() + 1).padStart(2, '0');
-        updateDays(); 
-        document.getElementById('daySelect').value = String(today.getDate()).padStart(2, '0');
-        updateCurrentDateStr();
-    }
-
-    function updateCurrentDateStr() {
-        const yyyy = document.getElementById('yearSelect').value;
-        const mm = document.getElementById('monthSelect').value;
-        const dd = document.getElementById('daySelect').value;
-        currentDate = `${yyyy}-${mm}-${dd}`;
-    }
-
-    window.handleYearMonthChange = function() {
-        updateDays();
-        window.changeDate();
-    }
-
-    window.changeDate = function() {
-        updateCurrentDateStr();
-        renderTasks();
-    }
-
-    window.handleKeyPress = function(event) {
-        if (event.key === 'Enter') window.addTask();
-    }
-
-    window.addTask = function() {
-        const hour = document.getElementById('hourSelect').value;
-        const minute = document.getElementById('minuteSelect').value;
-        const taskInput = document.getElementById('taskInput');
-        const errorMsg = document.getElementById('errorMsg');
-        const taskValue = taskInput.value.trim();
-
-        if (!taskValue) {
-            errorMsg.style.display = 'block';
-            return;
-        }
-        errorMsg.style.display = 'none';
-
-        const newTask = {
-            id: Date.now(),
-            date: currentDate,
-            time: `${hour}:${minute}`,
-            title: taskValue,
-            isCompleted: false,
-            isNotified: false
-        };
-
-        saveTask(newTask);
-
-        taskInput.value = '';
-        taskInput.focus();
-    }
-
-    window.editTask = function(id) {
-        const taskList = allTasks[currentDate] || [];
-        const task = taskList.find(t => t.id === id);
-        if (!task) return;
-
-        const newTitle = prompt('✏️ 修改行程內容：', task.title);
-        if (newTitle !== null && newTitle.trim() !== '') {
-            task.title = newTitle.trim();
-            saveTask(task);
-        }
-    }
-
-    window.toggleComplete = function(id) {
-        const taskList = allTasks[currentDate] || [];
-        const task = taskList.find(t => t.id === id);
-        if (task) {
-            task.isCompleted = !task.isCompleted;
-            saveTask(task);
-        }
-    }
-
-    window.deleteTask = function(id) {
-        const taskList = allTasks[currentDate] || [];
-        const task = taskList.find(t => t.id === id);
-        if (task && confirm('確定要刪除這個行程嗎？')) {
-            removeTask(task);
-        }
-    }
-
-    function renderTasks() {
-        const list = document.getElementById('scheduleList');
-        list.innerHTML = ''; 
-        
-        const tasksToRender = allTasks[currentDate] || [];
-
-        if (tasksToRender.length === 0) {
-            list.innerHTML = `
-                <div class="empty-state">
-                    <i class="fa-regular fa-calendar-xmark" style="font-size: 32px; margin-bottom: 12px; display: block; opacity: 0.5;"></i>
-                    這天還沒有行程，趕快新增一個吧！
-                </div>`;
-            return;
-        }
-
-        tasksToRender.forEach(task => {
-            const li = document.createElement('li');
-            li.className = `task-item ${task.isCompleted ? 'task-completed' : ''}`;
-            li.innerHTML = `
-                <div class="task-dot"></div>
-                <div class="task-content">
-                    <div class="task-info">
-                        <span class="task-time"><i class="fa-regular fa-clock"></i> ${task.time}</span>
-                        <span class="task-title">${task.title}</span>
-                    </div>
-                    <div class="task-actions">
-                        <button class="action-btn check-btn" onclick="toggleComplete(${task.id})" title="完成">
-                            <i class="fa-solid fa-check"></i>
-                        </button>
-                        <button class="action-btn edit-btn" onclick="editTask(${task.id})" title="編輯">
-                            <i class="fa-solid fa-pen-to-square"></i>
-                        </button>
-                        <button class="action-btn delete-btn" onclick="deleteTask(${task.id})" title="刪除">
-                            <i class="fa-solid fa-trash-can"></i>
-                        </button>
-                    </div>
-                </div>
-            `;
-            list.appendChild(li);
-        });
-    }
-
-    function checkNotifications() {
-        const now = new Date();
-        const yyyy = now.getFullYear();
-        const mm = String(now.getMonth() + 1).padStart(2, '0');
-        const dd = String(now.getDate()).padStart(2, '0');
-        const todayStr = `${yyyy}-${mm}-${dd}`;
-        
-        const currentHH = String(now.getHours()).padStart(2, '0');
-        const currentMM = String(now.getMinutes()).padStart(2, '0');
-        const currentTimeStr = `${currentHH}:${currentMM}`;
-
-        if (allTasks[todayStr]) {
-            allTasks[todayStr].forEach(task => {
-                if (task.time === currentTimeStr && !task.isCompleted && !task.isNotified) {
-                    triggerNotification(task);
-                }
-            });
-        }
-    }
-
-    function triggerNotification(task) {
-        task.isNotified = true;
-        saveTask(task);
-
-        const overlay = document.getElementById('notificationOverlay');
-        document.getElementById('notifTime').innerText = task.time;
-        document.getElementById('notifTitle').innerText = task.title;
-        overlay.style.display = 'flex';
-    }
-
-    window.closeNotification = function() {
-        document.getElementById('notificationOverlay').style.display = 'none';
-    }
-
-    setInterval(checkNotifications, 10000);
-
-    window.onload = function() {
-        initTheme();
-        initSelectors();
-        initDate();
-        initFirebase(); 
-    }
+setInterval(() => { tick(); if (records.some(r => !r.end)) renderStats(); }, 1000);
+store.init(render);
 </script>
-
 </body>
 </html>
